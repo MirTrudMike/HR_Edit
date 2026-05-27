@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+
+# Local env
+.env
+.venv/
+venv/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Caches and generated outputs
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+work/
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
