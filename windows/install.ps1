@@ -15,7 +15,10 @@
 #>
 
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+# "Continue" instead of "Stop": native tools (git, pip, winget) routinely write
+# progress to stderr; with "Stop" that triggers NativeCommandError even on success.
+# We check $LASTEXITCODE explicitly after every important native call.
+$ErrorActionPreference = "Continue"
 
 # ---------------------------------------------------------------------------
 # Config
@@ -56,18 +59,51 @@ function Refresh-EnvPath {
     $env:PATH = "$machine;$user"
 }
 
+# Runs an external (native) command block, prints its output, and calls Fail
+# if the exit code is non-zero. Uses "Continue" locally so that stderr progress
+# messages from git/winget/pip don't look like fatal PowerShell errors.
 function Invoke-External([string]$Desc, [scriptblock]$Block) {
     Write-Host "    $Desc..." -ForegroundColor DarkGray
-    & $Block 2>&1 | ForEach-Object {
-        $line = $_.ToString()
-        if ($line -match "(?i)error|failed|fatal") {
-            Write-Host "    $line" -ForegroundColor Red
-        } else {
-            Write-Host "    $line" -ForegroundColor DarkGray
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $Block 2>&1 | ForEach-Object {
+            $line = $_.ToString()
+            if ($line -match "(?i)error|failed|fatal") {
+                Write-Host "    $line" -ForegroundColor Red
+            } else {
+                Write-Host "    $line" -ForegroundColor DarkGray
+            }
         }
+    } finally {
+        $ErrorActionPreference = $prev
     }
     if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
         Fail "$Desc завершился с кодом $LASTEXITCODE"
+    }
+}
+
+# Same as Invoke-External but suppresses normal pip output, showing only
+# errors and warnings (pip is very chatty even with --quiet).
+function Invoke-Pip([string]$Desc, [scriptblock]$Block) {
+    Write-Host "    $Desc..." -ForegroundColor DarkGray
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $Block 2>&1 | ForEach-Object {
+            $line = $_.ToString()
+            if ($line -match "(?i)^\s*error|failed") {
+                Write-Host "    $line" -ForegroundColor Red
+            } elseif ($line -match "(?i)warning") {
+                Write-Host "    $line" -ForegroundColor Yellow
+            }
+            # everything else: silent
+        }
+    } finally {
+        $ErrorActionPreference = $prev
+    }
+    if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
+        Fail "$Desc завершился с ошибкой (код $LASTEXITCODE)"
     }
 }
 
@@ -93,7 +129,7 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
           "  Убедись, что Windows 10 (версия 1809+) или Windows 11 обновлена,`n" +
           "  или установи 'App Installer' из Microsoft Store: https://aka.ms/getwinget")
 }
-$wingetVer = (winget --version).Trim()
+try { $wingetVer = (winget --version).Trim() } catch { $wingetVer = "?" }
 Write-OK "winget $wingetVer"
 
 # ---------------------------------------------------------------------------
@@ -103,9 +139,12 @@ Write-Step "Проверяю Python..."
 
 function Test-PythonVersion([string]$Exe) {
     # Returns $true if $Exe is Python 3.9+.
-    # Wrapped in its own function so try/catch doesn't swallow the outer $ErrorActionPreference = Stop.
+    # Uses try/catch so any stderr noise from Store stubs doesn't propagate.
     try {
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
         $v = "$(& $Exe --version 2>&1)"
+        $ErrorActionPreference = $prev
         return ($v -match "Python 3\.(\d+)" -and [int]$Matches[1] -ge 9)
     } catch {
         return $false
@@ -154,7 +193,7 @@ if (-not $pythonExe) {
     }
 }
 
-$pyVer = (& $pythonExe --version 2>&1).ToString().Trim()
+try { $pyVer = "$(& $pythonExe --version 2>&1)".Trim() } catch { $pyVer = "?" }
 Write-OK "Python: $pyVer  ($pythonExe)"
 
 # ---------------------------------------------------------------------------
@@ -175,7 +214,7 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     }
 }
 
-$gitVer = (git --version).Trim()
+try { $gitVer = (git --version).Trim() } catch { $gitVer = "?" }
 Write-OK "Git: $gitVer"
 
 # ---------------------------------------------------------------------------
@@ -223,26 +262,12 @@ Write-OK "Виртуальное окружение: $venvDir"
 # ---------------------------------------------------------------------------
 Write-Step "Устанавливаю зависимости (несколько минут)..."
 
-Write-Host "    Обновляю pip..." -ForegroundColor DarkGray
-& $venvPip install --upgrade pip --quiet
-if ($LASTEXITCODE -ne 0) { Fail "Не удалось обновить pip." }
+$reqFile         = Join-Path $INSTALL_DIR "requirements.txt"
+$reqLauncherFile = Join-Path $INSTALL_DIR "windows\requirements-launcher.txt"
 
-$reqFile = Join-Path $INSTALL_DIR "requirements.txt"
-Write-Host "    Устанавливаю requirements.txt..." -ForegroundColor DarkGray
-& $venvPip install -r $reqFile 2>&1 | ForEach-Object {
-    $line = $_.ToString()
-    if ($line -match "(?i)error|failed") {
-        Write-Host "    $line" -ForegroundColor Red
-    } elseif ($line -match "(?i)warning") {
-        Write-Host "    $line" -ForegroundColor Yellow
-    }
-    # Остальное — тихо
-}
-if ($LASTEXITCODE -ne 0) { Fail "pip install requirements.txt завершился с ошибкой." }
-
-Write-Host "    Устанавливаю pystray и Pillow (трей)..." -ForegroundColor DarkGray
-& $venvPip install pystray Pillow --quiet
-if ($LASTEXITCODE -ne 0) { Fail "Не удалось установить pystray / Pillow." }
+Invoke-Pip "Обновляю pip"               { & $venvPip install --upgrade pip }
+Invoke-Pip "Устанавливаю requirements"  { & $venvPip install -r $reqFile }
+Invoke-Pip "Устанавливаю pystray/Pillow" { & $venvPip install -r $reqLauncherFile }
 
 Write-OK "Все Python-зависимости установлены"
 
@@ -265,17 +290,12 @@ if ($sofficeExe) {
     Write-Host "    Без него всё остальное работает нормально." -ForegroundColor DarkGray
     $ans = Read-Host "    Установить LibreOffice? [y/n]"
     if ($ans -eq "y") {
-        Write-Host "    Загружаю LibreOffice (может занять несколько минут)..." -ForegroundColor DarkGray
         # LibreOffice installer не поддерживает --silent через winget, будет показан UI
-        winget install --id TheDocumentFoundation.LibreOffice --source winget `
-            --accept-package-agreements --accept-source-agreements 2>&1 |
-            ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
-        if ($LASTEXITCODE -eq 0) {
-            Write-OK "LibreOffice установлен"
-        } else {
-            Write-Warn "winget не смог установить LibreOffice."
-            Write-Warn "Установи вручную позже: https://www.libreoffice.org/download/"
+        Invoke-External "winget install LibreOffice" {
+            winget install --id TheDocumentFoundation.LibreOffice --source winget `
+                --accept-package-agreements --accept-source-agreements
         }
+        Write-OK "LibreOffice установлен"
     } else {
         Write-Warn "LibreOffice пропущен. Можно установить позже."
     }
