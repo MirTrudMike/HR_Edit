@@ -35,5 +35,10 @@ SERVER_PORT: int = int(os.getenv("SERVER_PORT", "8765"))
 # ---------------------------------------------------------------------------
 DEFAULT_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
 DEFAULT_STRONG_MODEL: str = os.getenv("OPENAI_STRONG_MODEL", "gpt-5.5")
-ANALYSIS_MODEL: str = os.getenv("OPENAI_ANALYSIS_MODEL", "gpt-5.2")
+ANALYSIS_MODEL: str = os.getenv("OPENAI_ANALYSIS_MODEL", "gpt-4.1")
+ANALYSIS_MODELS: list[dict[str, str]] = [
+    {"id": "gpt-4.1",  "name": "GPT-4.1"},
+    {"id": "gpt-4o",   "name": "GPT-4o"},
+    {"id": "gpt-5.4",  "name": "GPT-5.4"},
+]
 ESCALATE_THRESHOLD: float = 0.85

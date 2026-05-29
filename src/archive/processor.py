@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import zipfile
 from collections.abc import Callable
@@ -88,8 +89,36 @@ def _render_fallback_original_html(source_docx: Path, reason: str) -> str:
 </html>"""
 
 
+def _find_soffice() -> str | None:
+    lo = shutil.which("libreoffice") or shutil.which("soffice")
+    if lo:
+        return lo
+    if sys.platform == "win32":
+        for p in [
+            r"C:\Program Files\LibreOffice\program\soffice.exe",
+            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+        ]:
+            if Path(p).exists():
+                return p
+    return None
+
+
+def _render_pages_pymupdf(pdf_path: Path, pages_dir: Path) -> list[str]:
+    import fitz  # pymupdf
+    doc = fitz.open(str(pdf_path))
+    names = []
+    mat = fitz.Matrix(2.0, 2.0)  # ~144 dpi
+    for i, page in enumerate(doc, 1):
+        pix = page.get_pixmap(matrix=mat)
+        name = f"page-{i:03d}.png"
+        pix.save(str(pages_dir / name))
+        names.append(name)
+    doc.close()
+    return names
+
+
 def render_original_docx(source_docx: Path, pdf_path: Path) -> str | None:
-    libreoffice = shutil.which("libreoffice") or shutil.which("soffice")
+    libreoffice = _find_soffice()
     html_fallback = pdf_path.with_suffix(".fallback.html")
     if html_fallback.exists():
         html_fallback.unlink()
@@ -129,27 +158,33 @@ def render_original_docx(source_docx: Path, pdf_path: Path) -> str | None:
 
 
 def render_original_pages(pdf_path: Path, pages_dir: Path) -> list[str]:
-    pdftoppm = shutil.which("pdftoppm")
     if pages_dir.exists():
         shutil.rmtree(pages_dir)
     pages_dir.mkdir(parents=True, exist_ok=True)
-    if not pdftoppm or not pdf_path.exists():
+    if not pdf_path.exists():
         return []
 
-    output_prefix = pages_dir / "page"
-    completed = subprocess.run(
-        [pdftoppm, "-png", "-r", "144", str(pdf_path), str(output_prefix)],
-        capture_output=True,
-        text=True,
-    )
-    if completed.returncode != 0:
-        shutil.rmtree(pages_dir, ignore_errors=True)
-        return []
+    pdftoppm = shutil.which("pdftoppm")
+    if pdftoppm:
+        output_prefix = pages_dir / "page"
+        completed = subprocess.run(
+            [pdftoppm, "-png", "-r", "144", str(pdf_path), str(output_prefix)],
+            capture_output=True,
+            text=True,
+        )
+        if completed.returncode != 0:
+            shutil.rmtree(pages_dir, ignore_errors=True)
+            pages_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            return sorted(
+                [path.name for path in pages_dir.glob("page-*.png")],
+                key=lambda name: int(name.rsplit("-", 1)[-1].split(".")[0]),
+            )
 
-    return sorted(
-        [path.name for path in pages_dir.glob("page-*.png")],
-        key=lambda name: int(name.rsplit("-", 1)[-1].split(".")[0]),
-    )
+    try:
+        return _render_pages_pymupdf(pdf_path, pages_dir)
+    except ImportError:
+        return []
 
 
 def extract_archive(

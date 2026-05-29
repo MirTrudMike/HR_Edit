@@ -352,7 +352,8 @@ if (-not $apiKey) {
 }
 
 $envContent = "OPENAI_API_KEY=$apiKey`nOPENAI_MODEL=gpt-4.1-mini`nOPENAI_STRONG_MODEL=gpt-4o`n"
-[System.IO.File]::WriteAllText($envFile, $envContent, [System.Text.Encoding]::UTF8)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($envFile, $envContent, $utf8NoBom)
 Write-OK ".env создан: $envFile"
 
 # ---------------------------------------------------------------------------

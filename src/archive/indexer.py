@@ -837,6 +837,30 @@ _ARCHIVE_VIEWER_CSS = r"""
     }
     .btn-retry:hover { background: var(--bg); }
 
+    /* ── Unsure errors section ── */
+    .ai-unsure-section { margin-top: 4px; }
+    .ai-unsure-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 7px 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      transition: background .1s, color .1s;
+    }
+    .ai-unsure-toggle:hover { background: #f1f5f9; color: var(--text-2); }
+    .ai-unsure-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+    .ai-error-item.unsure { opacity: 0.55; }
+    .ai-error-item.unsure .ai-error-accent { opacity: 0.5; }
+
     /* ── Re-analyze button ── */
     .btn-reanalyze {
       display: inline-flex;
@@ -852,6 +876,47 @@ _ARCHIVE_VIEWER_CSS = r"""
       transition: background .1s, color .1s, border-color .1s;
     }
     .btn-reanalyze:hover { background: #ede9fe; color: #7c3aed; border-color: #c4b5fd; }
+
+    /* ── Toolbar sections ── */
+    .toolbar-left  { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow: hidden; }
+    .toolbar-center { display: flex; align-items: center; flex-shrink: 0; }
+    .toolbar-right { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; min-width: 0; }
+    .panel.hidden { display: none; }
+
+    /* ── View toggle (segmented control) ── */
+    .view-toggle-group {
+      display: inline-flex;
+      background: #f1f5f9;
+      border: 1px solid #dde3ec;
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .view-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 28px;
+      padding: 0 13px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: inherit;
+      transition: background .13s, color .13s, box-shadow .13s;
+      user-select: none;
+    }
+    .view-toggle-btn:hover:not(.active) { background: rgba(0,0,0,.05); color: var(--text-2); }
+    .view-toggle-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.18);
+      font-weight: 600;
+    }
 
     /* ── Responsive ── */
     @media (max-width: 860px) {
@@ -881,11 +946,17 @@ _ARCHIVE_VIEWER_JS = r"""
     const originalPages = document.getElementById('originalPages');
     const origWrap      = document.getElementById('origWrap');
     const toggleOriginal= document.getElementById('toggleOriginal');
+    const textPane      = document.getElementById('textPane');
+    const toggleText    = document.getElementById('toggleText');
+    const aiPane        = document.getElementById('aiPane');
+    const toggleAi      = document.getElementById('toggleAi');
     let activeIndex = 0;
     const collapsedFolders = new Set();
-    let textZoom       = Number(localStorage.getItem('docxTextZoom')          || '100');
-    let origZoom       = Number(localStorage.getItem('docxOrigZoom')          || '100');
-    let showOriginal   = localStorage.getItem('docxShowOriginal')             === '1';
+    let textZoom         = Number(localStorage.getItem('docxTextZoom')        || '100');
+    let origZoom         = Number(localStorage.getItem('docxOrigZoom')        || '100');
+    let showOriginal     = localStorage.getItem('docxShowOriginal')           === '1';
+    let showTextPanel    = localStorage.getItem('docxShowText')               !== '0';
+    let showAiPanel      = localStorage.getItem('docxShowAi')                 === '1';
     let sidebarCollapsed = localStorage.getItem('docxSidebarCollapsed')       === '1';
     let sidebarBeforeOriginal = sidebarCollapsed;
 
@@ -931,15 +1002,20 @@ _ARCHIVE_VIEWER_JS = r"""
       localStorage.setItem('docxSidebarCollapsed', sidebarCollapsed ? '1' : '0');
     }
 
-    function applyOriginalPane() {
-      viewer.classList.toggle('split', showOriginal);
+    function applyViewerLayout() {
+      const contentCount = (showTextPanel ? 1 : 0) + (showOriginal ? 1 : 0);
+      textPane.classList.toggle('hidden', !showTextPanel);
       originalPane.classList.toggle('hidden', !showOriginal);
+      aiPane.classList.toggle('hidden', !showAiPanel);
+      viewer.classList.toggle('split', contentCount === 2);
+      viewer.classList.toggle('ai-open', showAiPanel);
+      toggleText.classList.toggle('active', showTextPanel);
       toggleOriginal.classList.toggle('active', showOriginal);
-      toggleOriginal.setAttribute('aria-pressed', showOriginal ? 'true' : 'false');
-      if (showOriginal) { sidebarBeforeOriginal = sidebarCollapsed; sidebarCollapsed = true; }
-      else { sidebarCollapsed = sidebarBeforeOriginal; }
-      applySidebar();
+      toggleAi.classList.toggle('active', showAiPanel);
+      toggleAi.setAttribute('aria-pressed', showAiPanel ? 'true' : 'false');
+      localStorage.setItem('docxShowText', showTextPanel ? '1' : '0');
       localStorage.setItem('docxShowOriginal', showOriginal ? '1' : '0');
+      localStorage.setItem('docxShowAi', showAiPanel ? '1' : '0');
     }
 
     function renderOriginalPages(doc) {
@@ -1041,25 +1117,30 @@ _ARCHIVE_VIEWER_JS = r"""
     document.getElementById('origZoomOut').addEventListener('click', () => { origZoom -= 10; applyOrigZoom(); });
     document.getElementById('origZoomIn').addEventListener('click',  () => { origZoom += 10; applyOrigZoom(); });
     sidebarToggle.addEventListener('click', () => { sidebarCollapsed = !sidebarCollapsed; if (showOriginal) sidebarBeforeOriginal = sidebarCollapsed; applySidebar(); });
-    toggleOriginal.addEventListener('click', () => { showOriginal = !showOriginal; applyOriginalPane(); if (showOriginal && docs[activeIndex]) selectDoc(activeIndex); });
+    toggleOriginal.addEventListener('click', () => {
+      showOriginal = !showOriginal;
+      if (showOriginal) { sidebarBeforeOriginal = sidebarCollapsed; sidebarCollapsed = true; }
+      else { sidebarCollapsed = sidebarBeforeOriginal; }
+      applySidebar();
+      applyViewerLayout();
+      if (showOriginal && docs[activeIndex]) renderOriginalPages(docs[activeIndex]);
+    });
+    toggleText.addEventListener('click', () => { showTextPanel = !showTextPanel; applyViewerLayout(); });
     search.addEventListener('input', renderTree);
     applyTextZoom();
     applySidebar();
-    applyOriginalPane();
+    applyViewerLayout();
     renderTree();
 
     // ── AI Panel ─────────────────────────────────────────────────────────────
     const archiveName   = document.querySelector('.app').dataset.archiveName || '';
-    const aiPane        = document.getElementById('aiPane');
     const promptSelect  = document.getElementById('promptSelect');
+    const modelSelect   = document.getElementById('modelSelect');
     const btnAnalyze    = document.getElementById('btnAnalyze');
-    const toggleAi      = document.getElementById('toggleAi');
     const aiIdleEl      = document.getElementById('aiIdle');
     const aiLoadingEl   = document.getElementById('aiLoading');
     const aiResultEl    = document.getElementById('aiResult');
     const aiErrorEl     = document.getElementById('aiErrorState');
-
-    let showAiPanel      = localStorage.getItem('docxShowAi') === '1';
     let aiAnalyzing      = false;
     let lastAnalyzedIndex = -1;
     const aiResultCache    = new Map();
@@ -1094,6 +1175,23 @@ _ARCHIVE_VIEWER_JS = r"""
       logic: '#f59e0b', other: '#94a3b8'
     };
 
+    async function loadAiModels() {
+      try {
+        const res  = await fetch('/api/models');
+        const data = await res.json();
+        const models  = data.models  || [];
+        const defId   = data.default || '';
+        modelSelect.innerHTML = '';
+        models.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = m.name;
+          if (m.id === defId) opt.selected = true;
+          modelSelect.appendChild(opt);
+        });
+      } catch (_) {}
+    }
+
     async function loadAiPrompts() {
       try {
         const res  = await fetch('/api/prompts');
@@ -1111,11 +1209,7 @@ _ARCHIVE_VIEWER_JS = r"""
     }
 
     function applyAiPanel() {
-      viewer.classList.toggle('ai-open', showAiPanel);
-      aiPane.classList.toggle('hidden', !showAiPanel);
-      toggleAi.classList.toggle('active', showAiPanel);
-      toggleAi.setAttribute('aria-pressed', showAiPanel ? 'true' : 'false');
-      localStorage.setItem('docxShowAi', showAiPanel ? '1' : '0');
+      applyViewerLayout();
     }
 
     function setAiState(state) {
@@ -1135,43 +1229,95 @@ _ARCHIVE_VIEWER_JS = r"""
       }
     }
 
+    function makeErrorItem(err, idx, isUnsure) {
+      const color = ERROR_TYPE_COLORS[err.error_type] || ERROR_TYPE_COLORS.other;
+      const label = ERROR_TYPE_LABELS[err.error_type] || 'Прочее';
+      const item = document.createElement('div');
+      item.className = 'ai-error-item' + (isUnsure ? ' unsure' : '');
+      item.innerHTML = `
+        <div class="ai-error-accent" style="background:${color}"></div>
+        <div class="ai-error-body">
+          <div class="ai-error-top">
+            <div class="ai-error-fragment">${escHtml(err.fragment || '')}</div>
+            <span class="ai-type-badge" style="background:${color}">${label}</span>
+          </div>
+          <div class="ai-error-explanation">${escHtml(err.explanation || '')}</div>
+          ${err.suggestion ? `<div class="ai-error-suggestion">${escHtml(err.suggestion)}</div>` : ''}
+        </div>`;
+      return item;
+    }
+
     function renderAiResult(result) {
       aiResultEl.innerHTML = '';
 
-      const summary = document.createElement('div');
-      summary.className = 'ai-summary' + (result.has_errors ? '' : ' no-errors');
-      const icon = result.has_errors ? 'error_outline' : 'check_circle';
-      const iconColor = result.has_errors ? '#f97316' : '#15803d';
-      summary.innerHTML = `<span class="ms" style="font-size:15px;color:${iconColor}">${icon}</span>` +
-                          `<span>${result.summary || ''}</span>`;
-      aiResultEl.appendChild(summary);
+      const allErrors    = result.errors || [];
+      const sureErrors   = allErrors.filter(e => e.confidence !== 'unsure');
+      const unsureErrors = allErrors.filter(e => e.confidence === 'unsure');
+      const hasAny       = allErrors.length > 0;
 
-      if (!result.has_errors || !result.errors.length) {
-        setAiState('result');
-        return;
+      let summaryText;
+      if (!hasAny) {
+        summaryText = 'Ошибок не найдено';
+      } else if (sureErrors.length > 0 && unsureErrors.length > 0) {
+        summaryText = `${sureErrors.length} ${sureErrors.length === 1 ? 'ошибка' : 'ошибок'} найдено`;
+      } else if (sureErrors.length > 0) {
+        summaryText = `${sureErrors.length} ${sureErrors.length === 1 ? 'ошибка' : 'ошибок'} найдено`;
+      } else {
+        summaryText = 'Явных ошибок нет';
       }
 
-      const list = document.createElement('div');
-      list.className = 'ai-error-list';
-      result.errors.forEach((err, idx) => {
-        const color = ERROR_TYPE_COLORS[err.error_type] || ERROR_TYPE_COLORS.other;
-        const label = ERROR_TYPE_LABELS[err.error_type] || 'Прочее';
-        const item = document.createElement('div');
-        item.className = 'ai-error-item';
-        item.innerHTML = `
-          <div class="ai-error-accent" style="background:${color}"></div>
-          <div class="ai-error-body">
-            <div class="ai-error-top">
-              <div class="ai-error-fragment">${escHtml(err.fragment || '')}</div>
-              <span class="ai-type-badge" style="background:${color}">${label}</span>
-            </div>
-            <div class="ai-error-explanation">${escHtml(err.explanation || '')}</div>
-            ${err.suggestion ? `<div class="ai-error-suggestion">${escHtml(err.suggestion)}</div>` : ''}
-          </div>`;
-        list.appendChild(item);
-        setTimeout(() => item.classList.add('visible'), 60 + idx * 40);
-      });
-      aiResultEl.appendChild(list);
+      const summary = document.createElement('div');
+      summary.className = 'ai-summary' + (hasAny ? '' : ' no-errors');
+      const icon = hasAny ? 'error_outline' : 'check_circle';
+      const iconColor = hasAny ? '#f97316' : '#15803d';
+      summary.innerHTML = `<span class="ms" style="font-size:15px;color:${iconColor}">${icon}</span>` +
+                          `<span>${summaryText}</span>`;
+      aiResultEl.appendChild(summary);
+
+      if (sureErrors.length > 0) {
+        const list = document.createElement('div');
+        list.className = 'ai-error-list';
+        sureErrors.forEach((err, idx) => {
+          const item = makeErrorItem(err, idx, false);
+          list.appendChild(item);
+          setTimeout(() => item.classList.add('visible'), 60 + idx * 40);
+        });
+        aiResultEl.appendChild(list);
+      }
+
+      if (unsureErrors.length > 0) {
+        const section = document.createElement('div');
+        section.className = 'ai-unsure-section';
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'ai-unsure-toggle';
+        toggle.innerHTML =
+          `<span class="ms" style="font-size:13px">help_outline</span>` +
+          `<span>На всякий глянуть (${unsureErrors.length})</span>` +
+          `<span class="ms" style="font-size:13px;margin-left:auto" data-arrow>expand_more</span>`;
+
+        const listWrap = document.createElement('div');
+        listWrap.className = 'ai-unsure-list';
+        listWrap.hidden = true;
+
+        toggle.addEventListener('click', () => {
+          listWrap.hidden = !listWrap.hidden;
+          toggle.querySelector('[data-arrow]').textContent =
+            listWrap.hidden ? 'expand_more' : 'expand_less';
+        });
+
+        unsureErrors.forEach((err, idx) => {
+          const item = makeErrorItem(err, idx, true);
+          listWrap.appendChild(item);
+          setTimeout(() => item.classList.add('visible'), 60 + idx * 40);
+        });
+
+        section.appendChild(toggle);
+        section.appendChild(listWrap);
+        aiResultEl.appendChild(section);
+      }
+
       setAiState('result');
     }
 
@@ -1193,6 +1339,7 @@ _ARCHIVE_VIEWER_JS = r"""
             archive_name: archiveName,
             doc_index: activeIndex,
             prompt_id: promptSelect.value || null,
+            model_id: modelSelect.value || null,
           }),
         });
         if (!res.ok) {
@@ -1216,6 +1363,7 @@ _ARCHIVE_VIEWER_JS = r"""
       showAiPanel = !showAiPanel;
       applyAiPanel();
       if (showAiPanel) {
+        loadAiModels();
         loadAiPrompts();
         const cached = getCachedResult(activeIndex);
         if (cached) renderAiResult(cached); else setAiState('idle');
@@ -1225,6 +1373,7 @@ _ARCHIVE_VIEWER_JS = r"""
     document.getElementById('aiRetry').addEventListener('click', analyzeDoc);
     btnReAnalyze.addEventListener('click', analyzeDoc);
 
+    loadAiModels();
     loadAiPrompts();
     applyAiPanel();
     if (showAiPanel) setAiState('idle');
@@ -1329,29 +1478,40 @@ def write_archive_index(out_dir: Path, archive_path: Path, results: list[dict[st
     <!-- ── Main ── -->
     <main>
       <div class="toolbar">
-        <div class="toolbar-title">
-          <div id="title" class="toolbar-doc-name"></div>
-          <div id="path"  class="toolbar-doc-path"></div>
+        <div class="toolbar-left">
+          <div class="toolbar-title">
+            <div id="title" class="toolbar-doc-name"></div>
+            <div id="path"  class="toolbar-doc-path"></div>
+          </div>
         </div>
-        <button id="copyText" class="toolbar-btn">
-          <span class="ms" style="font-size:15px">content_copy</span>Текст
-        </button>
-        <button id="copyMarkdown" class="toolbar-btn">
-          <span class="ms" style="font-size:15px">code</span>Markdown
-        </button>
-        <button id="toggleOriginal" type="button" class="toolbar-btn">
-          <span class="ms" style="font-size:15px">chrome_reader_mode</span>Оригинал
-        </button>
-        <button id="toggleAi" type="button" class="toolbar-btn btn-ai" aria-pressed="false">
-          <span class="ms" style="font-size:15px">auto_awesome</span>Умник
-        </button>
-        <span id="status" class="status-msg"></span>
+        <div class="toolbar-center">
+          <div class="view-toggle-group">
+            <button id="toggleText" type="button" class="view-toggle-btn active">
+              <span class="ms" style="font-size:14px">article</span>Разбор
+            </button>
+            <button id="toggleOriginal" type="button" class="view-toggle-btn">
+              <span class="ms" style="font-size:14px">chrome_reader_mode</span>Оригинал
+            </button>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <button id="copyText" class="toolbar-btn">
+            <span class="ms" style="font-size:15px">content_copy</span>Текст
+          </button>
+          <button id="copyMarkdown" class="toolbar-btn">
+            <span class="ms" style="font-size:15px">code</span>Markdown
+          </button>
+          <button id="toggleAi" type="button" class="toolbar-btn btn-ai" aria-pressed="false">
+            <span class="ms" style="font-size:15px">auto_awesome</span>Умник
+          </button>
+          <span id="status" class="status-msg"></span>
+        </div>
       </div>
 
       <div id="viewer" class="viewer">
 
         <!-- Markdown preview panel -->
-        <div class="panel">
+        <div id="textPane" class="panel">
           <div class="panel-header">
             <span class="panel-label">Предпросмотр</span>
             <div class="zoom-row">
@@ -1400,6 +1560,7 @@ def write_archive_index(out_dir: Path, archive_path: Path, results: list[dict[st
               <span class="panel-label">Умник</span>
             </div>
             <div style="display:flex;align-items:center;gap:4px">
+              <select id="modelSelect" class="prompt-select" title="Выбрать модель"></select>
               <select id="promptSelect" class="prompt-select" title="Выбрать промт"></select>
               <button id="btnReAnalyze" class="btn-reanalyze" type="button" hidden title="Запустить снова">
                 <span class="ms" style="font-size:15px">refresh</span>

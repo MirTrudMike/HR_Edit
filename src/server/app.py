@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from src.config import (
     ANALYSIS_MODEL,
+    ANALYSIS_MODELS,
     ARCHIVE_RUNS_DIR,
     CACHE_DIR,
     DEFAULT_MODEL,
@@ -51,6 +52,7 @@ class AnalyzeBody(BaseModel):
     archive_name: str
     doc_index: int
     prompt_id: str | None = None
+    model_id: str | None = None
 
 
 class SettingsBody(BaseModel):
@@ -122,18 +124,67 @@ def _md_to_plain(md: str) -> str:
     return _RE_MULTIBLANK.sub("\n\n", "\n".join(lines)).strip()
 
 
-def _call_openai_analyze(document_text: str, system_prompt: str, model: str) -> dict[str, Any]:
-    """Send document text to OpenAI and return parsed JSON result."""
+_RE_DEGREE = re.compile(r"°")
+# Figure label lines like "Изображение 1 -" or "Рисунок 2 -" are rendering artifacts.
+_RE_FIGURE_LABEL = re.compile(
+    r"^((изображение|рисунок|рис\.)\s*\d*\s*[-–—]?\s*)+$",
+    re.IGNORECASE,
+)
+
+
+def _filter_inline_artifacts(result: dict[str, Any]) -> dict[str, Any]:
+    """Remove false-positive errors caused by known DOCX rendering artifacts.
+
+    Two classes are filtered deterministically:
+    1. Punctuation errors whose fragment contains a degree symbol (°) — these are always
+       visual gaps from inline PNG images, not real spaces.
+    2. Any error whose fragment is solely a figure-label artifact like "Изображение 1 -"
+       or "Рисунок 2 -" — these captions appear in the rendered page but carry no text
+       to proofread.
+    """
+    errors = result.get("errors", [])
+    filtered = [
+        e for e in errors
+        if not (
+            e.get("error_type") == "punctuation"
+            and _RE_DEGREE.search(e.get("fragment", ""))
+        )
+        and not _RE_FIGURE_LABEL.match(e.get("fragment", "").strip())
+    ]
+    if len(filtered) != len(errors):
+        result = dict(result)
+        result["errors"] = filtered
+        result["error_count"] = len(filtered)
+        result["has_errors"] = bool(filtered)
+        result["summary"] = (
+            "Ошибок не найдено" if not filtered else f"{len(filtered)} ошибок найдено"
+        )
+    return result
+
+
+def _call_openai_analyze(image_paths: list[Path], system_prompt: str, model: str) -> dict[str, Any]:
+    """Send rendered document pages to OpenAI vision and return parsed JSON result."""
+    import base64
     import os
+
     from openai import OpenAI
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    content: list[Any] = [{"type": "text", "text": "Проверь этот документ:"}]
+    for page_path in image_paths:
+        b64 = base64.b64encode(page_path.read_bytes()).decode("ascii")
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{b64}", "detail": "high"},
+        })
+
     response = client.chat.completions.create(
         model=model,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": document_text},
+            {"role": "user", "content": content},
         ],
         temperature=0.1,
     )
@@ -491,6 +542,10 @@ def create_app(store: StateStore, settings_store: SettingsStore | None = None) -
     # Analyze API
     # ------------------------------------------------------------------
 
+    @app.get("/api/models")
+    async def list_models() -> dict[str, Any]:
+        return {"models": ANALYSIS_MODELS, "default": ANALYSIS_MODEL}
+
     @app.post("/api/analyze")
     async def analyze_document(body: AnalyzeBody) -> dict[str, Any]:
         archive_rec = store.get(body.archive_name)
@@ -507,13 +562,19 @@ def create_app(store: StateStore, settings_store: SettingsStore | None = None) -
         if body.doc_index < 0 or body.doc_index >= len(results):
             raise HTTPException(status_code=422, detail="doc_index out of range")
 
-        output_path = Path(results[body.doc_index]["output"])
-        if not output_path.exists():
-            raise HTTPException(status_code=404, detail="Document output file not found")
+        original_pages = results[body.doc_index].get("original_pages", [])
+        if not original_pages:
+            raise HTTPException(status_code=422, detail="Страницы оригинала не найдены — возможно, документ не был отрендерен")
 
-        document_text = _md_to_plain(output_path.read_text(encoding="utf-8"))
-        if not document_text.strip():
-            raise HTTPException(status_code=422, detail="Document is empty")
+        image_paths = [Path(p) for p in original_pages]
+        missing = [ip.name for ip in image_paths if not ip.exists()]
+        if missing:
+            raise HTTPException(status_code=404, detail=f"Файлы страниц не найдены: {', '.join(missing)}")
+
+        model = body.model_id or ANALYSIS_MODEL
+        valid_ids = {m["id"] for m in ANALYSIS_MODELS}
+        if model not in valid_ids:
+            raise HTTPException(status_code=422, detail=f"Неизвестная модель: {model}")
 
         prompt_id = body.prompt_id
         if prompt_id:
@@ -525,11 +586,13 @@ def create_app(store: StateStore, settings_store: SettingsStore | None = None) -
             raise HTTPException(status_code=404, detail="Prompt not found")
 
         try:
-            result = _call_openai_analyze(document_text, prompt_rec["text"], ANALYSIS_MODEL)
+            result = _call_openai_analyze(image_paths, prompt_rec["text"], model)
+            result = _filter_inline_artifacts(result)
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"OpenAI error: {exc}") from exc
 
         result["prompt_name"] = prompt_rec["name"]
+        result["model_id"] = model
         result["archive_name"] = body.archive_name
         result["doc_index"] = body.doc_index
         return result

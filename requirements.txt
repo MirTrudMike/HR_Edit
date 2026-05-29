@@ -6,3 +6,4 @@ watchdog
 fastapi
 uvicorn[standard]
 python-multipart
+pymupdf
