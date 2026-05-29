@@ -1,0 +1,8 @@
+python-dotenv
+lxml
+Pillow
+openai
+watchdog
+fastapi
+uvicorn[standard]
+python-multipart

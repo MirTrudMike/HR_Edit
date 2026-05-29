@@ -21,9 +21,26 @@ Thumbs.db
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Runtime data — device-specific, never shared
 work/
 
 # Logs and temp files
 *.log
 *.tmp
 *.bak
+
+# AI / dev tooling — not for deployment
+.gstack/
+.codex/
+.agents/
+CLAUDE.md
+
+# Development planning docs — internal only
+PLAN.md
+ARCHIVE_WORKFLOW.md
+DATA_FLOW.md
+docs/
+
+# Test fixtures
+test.docx

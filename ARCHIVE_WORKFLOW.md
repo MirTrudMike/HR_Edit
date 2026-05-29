@@ -33,23 +33,34 @@ python3 archive_extract.py "/path/to/archive.zip" --format md --ocr hybrid --des
 Выход:
 
 ```text
+work/archive_runs/index.html
 work/archive_runs/<archive-name>/
   index.html
   index.md
   manifest.json
-  Сценарный план.md
+  folder/file.docx
+  folder/file.original.pdf
+  folder/file.original.fallback.html
+  folder/file.original_pages/
+    page-1.png
+    page-2.png
   1. .../
     ...docx result.md
   2. .../
     ...docx result.md
 ```
 
+`work/archive_runs/index.html` - общая домашняя страница всех разобранных архивов. Оттуда можно перейти в любой сохраненный архив и продолжить просмотр.
+
 Текущий `index.html` уже является рабочим self-contained интерфейсом:
 
 - дерево папок слева повторяет структуру исходного архива;
 - справа открывается preview выбранного Markdown;
+- есть переключатель Original для боковой панели с изображениями страниц исходного DOCX;
+- оригинал рендерится локально через LibreOffice headless в PDF, затем PDF раскладывается в PNG-страницы; при ошибке показывается fallback с причиной;
 - есть поиск по документам;
 - есть Copy text и Copy Markdown;
+- рядом с каждым результатом сохраняется исходный `.docx`;
 - содержимое Markdown встроено в HTML, поэтому страницу можно открыть отдельно;
 - debug JSON и извлеченные картинки по умолчанию не сохраняются в result-папке, чтобы не плодить служебные файлы.
 
@@ -130,6 +141,10 @@ http://127.0.0.1:8765
     {
       "source": "folder/file.docx",
       "output": "folder/file.md",
+      "source_docx": "folder/file.docx",
+      "original_pdf": "folder/file.original.pdf",
+      "original_pages": ["folder/file.original_pages/page-1.png"],
+      "original_fallback": "folder/file.original.fallback.html",
       "debug": "folder/file.ocr.json",
       "images_dir": "folder/file_images"
     }

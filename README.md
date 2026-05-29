@@ -67,7 +67,7 @@ python3 docx_extract.py test.docx --ocr hybrid --format txt --describe-diagrams
 По умолчанию все результаты складываются в `work/`:
 
 - `work/runs/` - выходные `txt`, `md`, `json`, debug JSON и извлеченные картинки.
-- `work/archive_runs/` - результаты обработки ZIP-архивов.
+- `work/archive_runs/` - результаты обработки ZIP-архивов и домашняя страница библиотеки архивов.
 - `work/cache/ocr/` - кэш OCR по SHA-256 изображения.
 
 Папка `work/` добавлена в `.gitignore`. Ее можно удалить целиком, когда промежуточные результаты больше не нужны.
@@ -87,6 +87,7 @@ python3 archive_extract.py "/path/to/full 02.1-05-00055.zip" \
 Результаты появятся в:
 
 ```text
+work/archive_runs/index.html
 work/archive_runs/<archive-name>/
   index.html
   index.md
@@ -94,7 +95,9 @@ work/archive_runs/<archive-name>/
   ...результаты с сохранением структуры папок архива...
 ```
 
-`index.html` - основная страница для работы: слева дерево папок как в архиве, справа preview выбранного Markdown, есть кнопки Copy text и Copy Markdown. По умолчанию в папке результата остаются только `.md`, `index.html`, `index.md` и `manifest.json`; debug JSON и извлеченные картинки удаляются после обработки. Для отладки можно добавить `--keep-artifacts`.
+`work/archive_runs/index.html` - домашняя страница всех разобранных архивов. Она открывает каждый архивный результат по отдельности.
+
+`index.html` - основная страница для работы: слева дерево папок как в архиве, справа preview выбранного Markdown, есть кнопки Copy text и Copy Markdown, а также переключатель Original для боковой панели с изображениями страниц исходного DOCX. Рендер исходника делается через LibreOffice headless в PDF, затем PDF раскладывается в PNG-страницы; если конверсия падает, панель показывает fallback-вкладку с причиной. По умолчанию в папке результата остаются `.md`, копия исходного `.docx`, `original.pdf`, `original_pages/`, `original.fallback.html`, `index.html`, `index.md` и `manifest.json`; debug JSON и извлеченные картинки удаляются после обработки. Для отладки можно добавить `--keep-artifacts`.
 
 Для короткой проверки без API можно запустить:
 

@@ -1,0 +1,1649 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HYURazberesh</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:            #f2f4f6;
+      --surface:       #ffffff;
+      --surface-low:   #f8fafc;
+      --border:        #e2e8f0;
+      --border-hi:     #c5c6cd;
+      --text:          #191c1e;
+      --text-2:        #44474c;
+      --muted:         #75777d;
+      --accent:        #1d2b3e;
+      --chip-new-bg:   #dcfce7;
+      --chip-new-fg:   #15803d;
+      --chip-new-brd:  #86efac;
+      --chip-proc-bg:  #fef3c7;
+      --chip-proc-fg:  #92400e;
+      --chip-proc-brd: #fcd34d;
+      --chip-err-bg:   #fee2e2;
+      --chip-err-fg:   #991b1b;
+      --chip-err-brd:  #fca5a5;
+      --card-new-bg:   #f0fdf4;
+      --card-new-brd:  #86efac;
+      --card-proc-bg:  #fffbeb;
+      --card-proc-brd: #fcd34d;
+      --card-err-bg:   #fef2f2;
+      --card-err-brd:  #fca5a5;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      vertical-align: middle;
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+    .topbar-brand {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: -0.015em;
+    }
+    .watcher-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--surface-low);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+    .watcher-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      flex-shrink: 0;
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Page ── */
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+    .page-header { }
+    .page-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-bottom: 5px;
+    }
+    .refresh-note { font-size: 11px; color: var(--border-hi); margin-top: 8px; }
+
+    /* ── Page header row ── */
+    .page-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    /* ── Sort bar ── */
+    .sort-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .sort-label {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .sort-seg {
+      display: inline-flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .sort-seg-btn {
+      padding: 5px 13px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      white-space: nowrap;
+    }
+    .sort-seg-btn:hover { color: var(--text-2); background: var(--bg); }
+    .sort-seg-btn.sort-active { background: var(--accent); color: #fff; }
+    .sort-seg-btn.sort-active:hover { background: var(--accent); color: #fff; }
+
+    /* ── Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(296px, 1fr));
+      gap: 12px;
+    }
+
+    /* ── Card ── */
+    .card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px 16px;
+      cursor: pointer;
+      transition: border-color .12s, box-shadow .12s, transform .12s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    }
+    .card:hover {
+      border-color: var(--border-hi);
+      box-shadow: 0 4px 14px rgba(0,0,0,.07);
+      transform: translateY(-1px);
+    }
+    .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .card.is-new    { border-color: var(--card-new-brd);  background: var(--card-new-bg); }
+    .card.is-processing { border-color: var(--card-proc-brd); background: var(--card-proc-bg); }
+    .card.is-error  { border-color: var(--card-err-brd);  background: var(--card-err-bg); }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .card-icon {
+      width: 34px; height: 34px;
+      border-radius: 6px;
+      background: #eceef0;
+      display: flex; align-items: center; justify-content: center;
+      color: #505f76;
+      flex-shrink: 0;
+    }
+    .card.is-new .card-icon        { background: #dcfce7; color: #15803d; }
+    .card.is-processing .card-icon { background: #fef3c7; color: #b45309; }
+    .card.is-error .card-icon      { background: #fee2e2; color: #ba1a1a; }
+
+    .card-title {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      word-break: break-word;
+      color: var(--text);
+      padding-top: 1px;
+    }
+
+    /* ── Processing ring around icon ── */
+    .proc-ring-wrap {
+      position: relative;
+      background: transparent !important;
+      padding: 0 !important;
+      width: 34px;
+      height: 34px;
+      flex-shrink: 0;
+    }
+    .proc-ring {
+      position: absolute;
+      inset: 0;
+    }
+    .proc-ring-icon {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 15px !important;
+      color: #b45309;
+    }
+
+    /* ── Progress bar along bottom edge ── */
+    .proc-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 0 0 7px 7px;
+      background: rgba(252, 211, 77, 0.25);
+      overflow: hidden;
+    }
+    .proc-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      border-radius: 0 0 7px 7px;
+      transition: width 0.5s ease;
+      min-width: 0;
+    }
+
+    /* ── Card top-right: badge + three-dot menu ── */
+    .card-top-right {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Status chips ── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 2px 7px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .chip-new  { background: var(--chip-new-bg);  color: var(--chip-new-fg); }
+    .chip-proc { background: var(--chip-proc-bg); color: var(--chip-proc-fg); }
+    .chip-err  { background: var(--chip-err-bg);  color: var(--chip-err-fg); }
+    .chip-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .chip-spinner {
+      display: inline-block;
+      width: 9px; height: 9px;
+      border: 1.5px solid rgba(0,0,0,.2);
+      border-top-color: #b45309;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Card body ── */
+    .card-count {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .card-divider {
+      border: 0;
+      border-top: 1px solid var(--border);
+      margin: 11px 0;
+    }
+    .card.is-new .card-divider        { border-color: var(--card-new-brd); }
+    .card.is-processing .card-divider { border-color: var(--card-proc-brd); }
+    .card.is-error .card-divider      { border-color: var(--card-err-brd); }
+
+    .card-dates { display: flex; flex-direction: column; gap: 4px; }
+    .date-row   { display: flex; align-items: baseline; gap: 6px; font-size: 11px; }
+    .date-label { color: var(--muted); min-width: 86px; flex-shrink: 0; }
+    .date-value { color: var(--text-2); font-variant-numeric: tabular-nums; }
+    .date-value.never { color: var(--muted); font-style: italic; }
+
+    /* ── Three-dot dropdown menu ── */
+    .menu-wrap { position: relative; }
+
+    .menu-btn {
+      width: 26px; height: 26px;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      transition: background .1s, color .1s;
+    }
+    .menu-btn:hover { background: rgba(0,0,0,.06); color: var(--text-2); }
+    .menu-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .menu-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      min-width: 164px;
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 6px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.11);
+      z-index: 300;
+      padding: 4px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 7px 10px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      transition: background .1s;
+    }
+    .menu-item:hover { background: var(--surface-low); }
+    .menu-item-danger { color: #dc2626; }
+    .menu-item-danger:hover { background: #fff1f2; }
+
+    /* ── Modals ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.38);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+    .modal-overlay[hidden] { display: none; }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 28px 24px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.16);
+      animation: modalIn .12s ease-out;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(.97) translateY(-4px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .modal-body {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+    .modal-input {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color .12s, box-shadow .12s;
+      margin-bottom: 20px;
+    }
+    .modal-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(29,43,62,.10);
+    }
+    .modal-input.input-error { border-color: #dc2626; }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background .1s, border-color .1s;
+      line-height: 1;
+    }
+    .btn-secondary {
+      background: var(--surface);
+      border-color: var(--border-hi);
+      color: var(--text-2);
+    }
+    .btn-secondary:hover { background: var(--bg); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #253649; }
+    .btn-danger {
+      background: #dc2626;
+      color: #fff;
+    }
+    .btn-danger:hover { background: #b91c1c; }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      margin-bottom: 20px;
+      padding: 22px 24px;
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      min-height: 72px;
+      user-select: none;
+    }
+    .drop-zone:hover { border-color: var(--border-hi); background: var(--surface-low); }
+    .drop-zone.dz-drag { border-color: var(--accent); background: #f0f4f8; }
+    .drop-zone.dz-uploading { cursor: default; }
+    .drop-zone.dz-success { border-color: #86efac; background: var(--card-new-bg); cursor: default; }
+    .drop-zone.dz-error   { border-color: #fca5a5; background: var(--card-err-bg); cursor: default; }
+
+    .dz-icon {
+      font-size: 28px;
+      color: var(--muted);
+      flex-shrink: 0;
+      transition: color .15s;
+    }
+    .drop-zone:hover .dz-icon { color: var(--text-2); }
+    .drop-zone.dz-drag .dz-icon { color: var(--accent); }
+
+    .dz-body { text-align: left; }
+    .dz-primary   { font-size: 13px; font-weight: 500; color: var(--text-2); }
+    .dz-secondary { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .dz-link { color: var(--accent); text-decoration: underline; }
+
+    .dz-spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(0,0,0,.12);
+      border-top-color: #b45309;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      padding: 48px 32px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      text-align: center;
+      color: var(--text-2);
+      font-size: 14px;
+    }
+    .empty-icon { font-size: 44px; margin-bottom: 12px; color: var(--border-hi); }
+    .empty p { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── Settings button ── */
+    .settings-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .12s, color .12s, border-color .12s;
+      flex-shrink: 0;
+    }
+    .settings-btn:hover { background: var(--surface-low); color: var(--text-2); border-color: var(--border-hi); }
+    .settings-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Settings modal ── */
+    .settings-modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0;
+      width: 100%;
+      max-width: 560px;
+      max-height: 88vh;
+      box-shadow: 0 24px 64px rgba(0,0,0,.18);
+      animation: modalIn .12s ease-out;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .settings-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .settings-close {
+      width: 28px; height: 28px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: none; border-radius: 5px;
+      background: transparent; cursor: pointer;
+      color: var(--muted); font-family: inherit;
+      transition: background .1s, color .1s;
+    }
+    .settings-close:hover { background: var(--bg); color: var(--text); }
+    .settings-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 24px;
+    }
+    .settings-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Prompt list ── */
+    .prompt-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .prompt-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-low);
+    }
+    .prompt-item-body { flex: 1; min-width: 0; }
+    .prompt-item-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .default-badge {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .prompt-item-preview {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .prompt-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .prompt-action-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .1s, color .1s, border-color .1s;
+    }
+    .prompt-action-btn:hover { background: var(--bg); color: var(--text-2); border-color: var(--border-hi); }
+    .prompt-action-btn.danger:hover { background: #fff1f2; color: #dc2626; border-color: #fca5a5; }
+
+    /* ── Add/Edit prompt form ── */
+    .prompt-form {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      background: var(--surface);
+      margin-top: 4px;
+    }
+    .prompt-form[hidden] { display: none; }
+    .prompt-form-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .form-field { margin-bottom: 12px; }
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 5px;
+    }
+    .form-input, .form-textarea {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color .12s, box-shadow .12s;
+    }
+    .form-input:focus, .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(29,43,62,.08);
+    }
+    .form-textarea { resize: vertical; min-height: 120px; line-height: 1.5; }
+    .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+    .btn-add-prompt {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border: 1px dashed var(--border-hi);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color .1s, background .1s, color .1s;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-add-prompt:hover { border-color: var(--accent); color: var(--accent); background: #f5f7ff; }
+
+    /* ── Topbar mode switch ── */
+    .mode-switch-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mode-switch-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .mode-switch-btn {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      border-radius: 11px;
+      background: #d1d5db;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+      transition: background .22s;
+    }
+    .mode-switch-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .mode-switch-btn.on { background: #d97706; }
+    .mode-switch-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.25);
+      transition: transform .22s;
+      pointer-events: none;
+    }
+    .mode-switch-btn.on .mode-switch-thumb { transform: translateX(18px); }
+
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .topbar { padding: 0 16px; }
+      .page { padding: 20px 16px 60px; }
+      .mode-switch-label { display: none; }
+      .sort-label { display: none; }
+      .sort-seg-btn { padding: 5px 9px; font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <span class="topbar-brand">HYURazberesh</span>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="mode-switch-wrap" title="Режим разбора картинок">
+        <span class="mode-switch-label" id="modeSwitchLabel">только формулы</span>
+        <button class="mode-switch-btn" id="modeSwitchBtn" role="switch" aria-checked="false" type="button">
+          <span class="mode-switch-thumb"></span>
+        </button>
+      </div>
+      <div class="watcher-pill">
+        <span class="watcher-dot"></span>
+        <span>Слежу за Загрузками</span>
+      </div>
+      <button class="settings-btn" id="settingsBtn" title="Настройки">
+        <span class="material-symbols-outlined" style="font-size:17px">settings</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="page">
+    <div class="page-header-row">
+      <div class="page-header">
+        <h1 class="page-title">Вся ваша ерунда</h1>
+        <div class="refresh-note" id="refreshNote"></div>
+      </div>
+      <div class="sort-bar">
+        <span class="sort-label">Сортировка</span>
+        <div class="sort-seg" id="sortSeg">
+          <button class="sort-seg-btn" data-sort="added" type="button">По добавлению</button>
+          <button class="sort-seg-btn" data-sort="opened" type="button">По открытию</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload drop zone -->
+    <div class="drop-zone" id="dropZone" title="Кинь сюда .zip или .docx">
+      <input type="file" id="fileInput" accept=".zip,.docx" hidden>
+      <span class="material-symbols-outlined dz-icon" id="dzIcon">cloud_upload</span>
+      <div class="dz-body" id="dzBody">
+        <div class="dz-primary">Тащи сюда .zip или .docx</div>
+        <div class="dz-secondary">или <span class="dz-link" id="dzBrowse">выбери файл</span> — хоть откуда</div>
+      </div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty" hidden>
+      <div class="empty-icon">
+        <span class="material-symbols-outlined" style="font-size:44px">inventory_2</span>
+      </div>
+      Пусто тут.
+      <p>Кинь <strong>full&nbsp;*.zip</strong> или <strong>.docx</strong> в Загрузки или тащи прямо сюда.</p>
+    </div>
+  </div>
+
+  <!-- Rename modal -->
+  <div id="renameOverlay" class="modal-overlay" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="renameTitle">
+      <div class="modal-title" id="renameTitle">Переименовать</div>
+      <div class="modal-body">Как обзовём? Имя файла само по себе не меняется.</div>
+      <input id="renameInput" class="modal-input" type="text" maxlength="200"
+             placeholder="Название архива" autocomplete="off">
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="renameCancelBtn">Отмена</button>
+        <button class="btn btn-primary" id="renameConfirmBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation modal -->
+  <div id="deleteOverlay" class="modal-overlay" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+      <div class="modal-title" id="deleteTitle">Удалить</div>
+      <div class="modal-body" id="deleteBody"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="deleteCancelBtn">Отмена</button>
+        <button class="btn btn-danger" id="deleteConfirmBtn">
+          <span class="material-symbols-outlined" style="font-size:15px">delete</span>
+          Удалить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="settingsOverlay" class="modal-overlay" hidden>
+    <div class="settings-modal-box" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="settings-header">
+        <span class="settings-title" id="settingsTitle">Настройки</span>
+        <button class="settings-close" id="settingsCloseBtn" type="button">
+          <span class="material-symbols-outlined" style="font-size:17px">close</span>
+        </button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-section-title">Промты умника</div>
+        <div id="promptList" class="prompt-list"></div>
+        <button class="btn-add-prompt" id="addPromptBtn" type="button">
+          <span class="material-symbols-outlined" style="font-size:16px">add</span>
+          Добавить промт
+        </button>
+        <div id="promptForm" class="prompt-form" hidden>
+          <div id="promptFormTitle" class="prompt-form-title">Новый промт</div>
+          <div class="form-field">
+            <label class="form-label" for="promptNameInput">Название <span style="font-weight:400;color:var(--muted)">(до 70 символов)</span></label>
+            <input id="promptNameInput" class="form-input" type="text" maxlength="70" placeholder="Например: Корректор" autocomplete="off">
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="promptTextInput">Текст промта</label>
+            <textarea id="promptTextInput" class="form-textarea" placeholder="Системный промт для OpenAI..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-secondary" id="promptFormCancelBtn" type="button">Отмена</button>
+            <button class="btn btn-primary" id="promptFormSaveBtn" type="button">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Duplicate warning modal -->
+  <div id="dupOverlay" class="modal-overlay" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="dupTitle">
+      <div class="modal-title" id="dupTitle">Такой уже есть</div>
+      <div class="modal-body" id="dupBody"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="dupCancelBtn">Отмена</button>
+        <button class="btn btn-primary" id="dupConfirmBtn">Обновить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const grid        = document.getElementById('grid');
+    const empty       = document.getElementById('empty');
+    const refreshNote = document.getElementById('refreshNote');
+
+    let currentArchives = [];
+    let rawArchives = [];
+    let currentSort = localStorage.getItem('masha_sort') || 'added';
+
+    const MONTHS = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+
+    function fmtDate(iso) {
+      if (!iso) return null;
+      const d = new Date(iso);
+      return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function pad(n) { return String(n).padStart(2,'0'); }
+
+    function makeBadge(status, isNew, progDone, progTotal) {
+      if (status === 'processing') {
+        const pct = progTotal > 0 ? ` ${Math.round(progDone / progTotal * 100)}%` : '';
+        return `<span class="chip chip-proc"><span class="chip-spinner"></span>Разбираю${pct}</span>`;
+      }
+      if (status === 'error')
+        return `<span class="chip chip-err"><span class="chip-dot"></span>Ошибка</span>`;
+      if (isNew)
+        return `<span class="chip chip-new"><span class="chip-dot"></span>Новый</span>`;
+      return '';
+    }
+
+    function dateRow(label, iso) {
+      const v = fmtDate(iso);
+      return `<div class="date-row">
+        <span class="date-label">${label}</span>
+        <span class="date-value${v ? '' : ' never'}">${v || 'Никогда'}</span>
+      </div>`;
+    }
+
+    function plural(n) {
+      const m10 = n % 10, m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return '';
+      if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'а';
+      return 'ов';
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function openArchive(a) {
+      fetch(`/api/archives/${encodeURIComponent(a.name)}/open`, { method:'POST' }).catch(()=>{});
+      window.location.href = `/archives/${encodeURIComponent(a.name)}/index.html`;
+    }
+
+    // ── Dropdown menu ────────────────────────────────────────────────────────
+    let currentOpenMenu = null;
+
+    function closeAllMenus() {
+      if (currentOpenMenu) {
+        currentOpenMenu.hidden = true;
+        currentOpenMenu = null;
+      }
+    }
+
+    document.addEventListener('click', closeAllMenus);
+
+    // ── Rename modal ─────────────────────────────────────────────────────────
+    const renameOverlay    = document.getElementById('renameOverlay');
+    const renameInput      = document.getElementById('renameInput');
+    const renameCancelBtn  = document.getElementById('renameCancelBtn');
+    const renameConfirmBtn = document.getElementById('renameConfirmBtn');
+    let pendingRenameId    = null;
+
+    function openRename(archiveId, displayName) {
+      pendingRenameId = archiveId;
+      renameInput.value = displayName;
+      renameInput.classList.remove('input-error');
+      renameOverlay.hidden = false;
+      requestAnimationFrame(() => { renameInput.focus(); renameInput.select(); });
+    }
+
+    function closeRename() {
+      renameOverlay.hidden = true;
+      pendingRenameId = null;
+    }
+
+    async function submitRename() {
+      const displayName = renameInput.value.trim();
+      if (!displayName) {
+        renameInput.classList.add('input-error');
+        renameInput.focus();
+        return;
+      }
+      const id = pendingRenameId;
+      closeRename();
+      try {
+        await fetch(`/api/archives/${encodeURIComponent(id)}/rename`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ display_name: displayName }),
+        });
+      } catch (_) {}
+      refresh();
+    }
+
+    renameCancelBtn.addEventListener('click', closeRename);
+    renameConfirmBtn.addEventListener('click', submitRename);
+    renameOverlay.addEventListener('click', e => { if (e.target === renameOverlay) closeRename(); });
+    renameInput.addEventListener('input', () => renameInput.classList.remove('input-error'));
+    renameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  submitRename();
+      if (e.key === 'Escape') closeRename();
+    });
+
+    // ── Delete modal ─────────────────────────────────────────────────────────
+    const deleteOverlay    = document.getElementById('deleteOverlay');
+    const deleteBody       = document.getElementById('deleteBody');
+    const deleteCancelBtn  = document.getElementById('deleteCancelBtn');
+    const deleteConfirmBtn = document.getElementById('deleteConfirmBtn');
+    let pendingDeleteId    = null;
+
+    function openDelete(archiveId, displayName) {
+      pendingDeleteId = archiveId;
+      deleteBody.innerHTML =
+        `Точно удалить <strong>${esc(displayName)}</strong>?` +
+        `<span style="color:var(--muted);font-size:12px;display:block;margin-top:6px">` +
+        `Файлы снесёт, назад не вернуть.</span>`;
+      deleteOverlay.hidden = false;
+      requestAnimationFrame(() => deleteConfirmBtn.focus());
+    }
+
+    function closeDelete() {
+      deleteOverlay.hidden = true;
+      pendingDeleteId = null;
+    }
+
+    async function submitDelete() {
+      const id = pendingDeleteId;
+      closeDelete();
+      try {
+        await fetch(`/api/archives/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      } catch (_) {}
+      const lsPrefix = 'umnik:' + id + ':';
+      Object.keys(localStorage).filter(k => k.startsWith(lsPrefix)).forEach(k => localStorage.removeItem(k));
+      refresh();
+    }
+
+    deleteCancelBtn.addEventListener('click', closeDelete);
+    deleteConfirmBtn.addEventListener('click', submitDelete);
+    deleteOverlay.addEventListener('click', e => { if (e.target === deleteOverlay) closeDelete(); });
+
+    // ── Duplicate warning modal ──────────────────────────────────────────────
+    const dupOverlay    = document.getElementById('dupOverlay');
+    const dupBody       = document.getElementById('dupBody');
+    const dupCancelBtn  = document.getElementById('dupCancelBtn');
+    const dupConfirmBtn = document.getElementById('dupConfirmBtn');
+    let pendingDupFile  = null;
+
+    function openDuplicate(file, existing) {
+      pendingDupFile = file;
+      const displayName = existing.display_name || existing.name;
+      const isProc = existing.status === 'processing';
+      if (isProc) {
+        dupBody.innerHTML =
+          `<strong>${esc(displayName)}</strong> прямо сейчас разбирается — подожди, пока закончит.`;
+        dupConfirmBtn.hidden = true;
+      } else {
+        dupBody.innerHTML =
+          `<strong>${esc(displayName)}</strong> уже есть в библиотеке.` +
+          `<span style="color:var(--muted);font-size:12px;display:block;margin-top:6px">` +
+          `Разберётся заново, старое заменится.</span>`;
+        dupConfirmBtn.hidden = false;
+      }
+      dupOverlay.hidden = false;
+      requestAnimationFrame(() => (isProc ? dupCancelBtn : dupConfirmBtn).focus());
+    }
+
+    function closeDuplicate() {
+      dupOverlay.hidden = true;
+      pendingDupFile = null;
+      setDzState('idle');
+    }
+
+    async function confirmDuplicate() {
+      const file = pendingDupFile;
+      dupOverlay.hidden = true;
+      pendingDupFile = null;
+      await doUpload(file);
+    }
+
+    dupCancelBtn.addEventListener('click', closeDuplicate);
+    dupConfirmBtn.addEventListener('click', confirmDuplicate);
+    dupOverlay.addEventListener('click', e => { if (e.target === dupOverlay) closeDuplicate(); });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (!renameOverlay.hidden) { closeRename(); return; }
+        if (!deleteOverlay.hidden) { closeDelete(); return; }
+        if (!dupOverlay.hidden)    { closeDuplicate(); return; }
+        closeAllMenus();
+      }
+    });
+
+    // ── Card rendering ───────────────────────────────────────────────────────
+    function toSafeName(filename) {
+      const dotIdx = filename.lastIndexOf('.');
+      const stem = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
+      // Mirror Python: ch.isalnum() accepts any Unicode letter/digit; ch in " ._()-"
+      const safe = stem.split('').map(ch => {
+        if (' ._()-'.includes(ch)) return ch;
+        if (/\p{L}|\p{N}/u.test(ch)) return ch;
+        return '_';
+      }).join('');
+      return safe.replace(/^[ .]+|[ .]+$/g, '') || 'upload';
+    }
+
+    function sortArchives(archives, key) {
+      const arr = [...archives];
+      if (key === 'opened') {
+        arr.sort((a, b) => {
+          const ta = a.last_opened_at || '';
+          const tb = b.last_opened_at || '';
+          if (!ta && !tb) {
+            const pa = a.processed_at || a.downloaded_at || '';
+            const pb = b.processed_at || b.downloaded_at || '';
+            return pb > pa ? 1 : -1;
+          }
+          if (!ta) return 1;
+          if (!tb) return -1;
+          return tb > ta ? 1 : -1;
+        });
+      } else {
+        arr.sort((a, b) => {
+          const ta = a.processed_at || a.downloaded_at || '';
+          const tb = b.processed_at || b.downloaded_at || '';
+          return tb > ta ? 1 : -1;
+        });
+      }
+      return arr;
+    }
+
+    function render(archives, animate) {
+      currentArchives = archives;
+      closeAllMenus();
+
+      const oldPositions = {};
+      if (animate) {
+        grid.querySelectorAll('.card[data-name]').forEach(el => {
+          oldPositions[el.dataset.name] = el.getBoundingClientRect();
+        });
+      }
+
+      grid.innerHTML = '';
+      if (!archives.length) { empty.hidden = false; return; }
+      empty.hidden = true;
+
+      archives.forEach(a => {
+        const status      = a.status || 'ready';
+        const isNew       = !!a.is_new;
+        const isProc      = status === 'processing';
+        const displayName = a.display_name || a.name;
+        const progDone    = a.progress_done  || 0;
+        const progTotal   = a.progress_total || 0;
+
+        const el  = document.createElement('div');
+        const cls = ['card'];
+        if (isNew)   cls.push('is-new');
+        if (isProc)  cls.push('is-processing');
+        if (status === 'error') cls.push('is-error');
+        el.className = cls.join(' ');
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+
+        const badge = makeBadge(status, isNew, progDone, progTotal);
+        const cardIcon = a.kind === 'docx' ? 'description' : 'folder_zip';
+
+        // Icon: SVG progress ring for processing, plain icon otherwise
+        let iconHtml;
+        if (isProc) {
+          const circum = 87.96;
+          const offset = progTotal > 0
+            ? (circum * (1 - progDone / progTotal)).toFixed(1)
+            : circum.toFixed(1);
+          iconHtml = `<div class="card-icon proc-ring-wrap">
+            <svg class="proc-ring" viewBox="0 0 34 34" width="34" height="34">
+              <circle cx="17" cy="17" r="14" fill="none" stroke="#fef3c7" stroke-width="2.5"/>
+              <circle cx="17" cy="17" r="14" fill="none" stroke="#f59e0b" stroke-width="2.5"
+                stroke-linecap="round" transform="rotate(-90 17 17)"
+                stroke-dasharray="${circum}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <span class="material-symbols-outlined proc-ring-icon">${cardIcon}</span>
+          </div>`;
+        } else {
+          iconHtml = `<div class="card-icon">
+            <span class="material-symbols-outlined">${cardIcon}</span>
+          </div>`;
+        }
+
+        // Count / progress text
+        let countHtml = '';
+        if (isProc) {
+          const progText = progTotal > 0
+            ? `обработано ${progDone} из ${progTotal}`
+            : 'разбираюсь…';
+          countHtml = `<div class="card-count">
+            <span class="material-symbols-outlined" style="font-size:14px">sync</span>
+            ${progText}
+          </div>`;
+        } else if (a.count) {
+          countHtml = `<div class="card-count">
+            <span class="material-symbols-outlined" style="font-size:14px">description</span>
+            ${a.count} документ${plural(a.count)}
+          </div>`;
+        }
+
+        // Bottom-edge progress bar
+        const barPct = progTotal > 0 ? (progDone / progTotal * 100).toFixed(1) : '0';
+        const progBarHtml = isProc
+          ? `<div class="proc-bar"><div class="proc-bar-fill" style="width:${barPct}%"></div></div>`
+          : '';
+
+        el.innerHTML = `
+          <div class="card-top">
+            ${iconHtml}
+            <div class="card-title">${esc(displayName)}</div>
+            <div class="card-top-right">
+              ${badge}
+              <div class="menu-wrap">
+                <button class="menu-btn" title="Действия" type="button">
+                  <span class="material-symbols-outlined" style="font-size:16px">more_vert</span>
+                </button>
+                <div class="menu-dropdown" hidden>
+                  <button class="menu-item" type="button" data-action="rename">
+                    <span class="material-symbols-outlined" style="font-size:15px">edit</span>
+                    Переименовать
+                  </button>
+                  <button class="menu-item menu-item-danger" type="button" data-action="delete">
+                    <span class="material-symbols-outlined" style="font-size:15px">delete</span>
+                    Удалить
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          ${countHtml}
+          <hr class="card-divider">
+          <div class="card-dates">
+            ${dateRow('Скачан:', a.downloaded_at)}
+            ${dateRow('Обработан:', a.processed_at)}
+            ${dateRow('Открывался:', a.last_opened_at)}
+          </div>
+          ${progBarHtml}`;
+
+        const menuBtn      = el.querySelector('.menu-btn');
+        const menuDropdown = el.querySelector('.menu-dropdown');
+
+        menuBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const willOpen = menuDropdown.hidden;
+          closeAllMenus();
+          if (willOpen) {
+            menuDropdown.hidden = false;
+            currentOpenMenu = menuDropdown;
+          }
+        });
+
+        el.querySelectorAll('.menu-item').forEach(item => {
+          item.addEventListener('click', e => {
+            e.stopPropagation();
+            closeAllMenus();
+            if (item.dataset.action === 'rename') openRename(a.name, displayName);
+            if (item.dataset.action === 'delete') openDelete(a.name, displayName);
+          });
+        });
+
+        if (status === 'ready' || status === 'error') {
+          el.addEventListener('click', () => openArchive(a));
+          el.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') openArchive(a);
+          });
+        }
+
+        el.dataset.name = a.name;
+        grid.appendChild(el);
+      });
+
+      if (animate) {
+        grid.querySelectorAll('.card[data-name]').forEach(el => {
+          const old = oldPositions[el.dataset.name];
+          if (!old) return;
+          const cur = el.getBoundingClientRect();
+          const dx = old.left - cur.left;
+          const dy = old.top - cur.top;
+          if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+          el.style.transition = 'none';
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+          el.getBoundingClientRect(); // force reflow
+          el.style.transition = 'transform 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+          el.style.transform = '';
+          el.addEventListener('transitionend', () => {
+            el.style.transition = '';
+            el.style.transform = '';
+          }, { once: true });
+        });
+      }
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/api/archives');
+        if (!res.ok) return;
+        const data = await res.json();
+        rawArchives = data.archives || [];
+        render(sortArchives(rawArchives, currentSort));
+        const now = new Date();
+        refreshNote.textContent =
+          `Обновлено в ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      } catch (_) {}
+    }
+
+    refresh();
+    setInterval(refresh, 5000);
+
+    // ── Upload drop zone ─────────────────────────────────────────────────────
+    const dropZone  = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const dzIcon    = document.getElementById('dzIcon');
+    const dzBody    = document.getElementById('dzBody');
+
+    const DZ_IDLE = `
+      <div class="dz-primary">Тащи сюда .zip или .docx</div>
+      <div class="dz-secondary">или <span class="dz-link" id="dzBrowse">выбери файл</span> — хоть откуда</div>`;
+
+    function setDzState(state, text) {
+      dropZone.className = 'drop-zone' + (state !== 'idle' ? ' dz-' + state : '');
+      dropZone.style.pointerEvents = state === 'uploading' ? 'none' : '';
+
+      if (state === 'idle') {
+        dzIcon.textContent = 'cloud_upload';
+        dzIcon.style.color = '';
+        dzIcon.style.display = '';
+        dzBody.innerHTML   = DZ_IDLE;
+        document.getElementById('dzBrowse').addEventListener('click', onBrowseClick);
+      } else if (state === 'uploading') {
+        dzIcon.style.display = 'none';
+        dzBody.innerHTML = `<div class="dz-primary" style="display:flex;align-items:center;gap:10px">
+          <span class="dz-spinner"></span>
+          Грузим <strong>${esc(text)}</strong>…
+        </div>`;
+      } else if (state === 'success') {
+        dzIcon.style.display = '';
+        dzIcon.textContent   = 'check_circle';
+        dzIcon.style.color   = '#15803d';
+        dzBody.innerHTML     = `<div class="dz-primary">${esc(text)} — пошёл разбираться</div>`;
+      } else if (state === 'error') {
+        dzIcon.style.display = '';
+        dzIcon.textContent   = 'error';
+        dzIcon.style.color   = '#dc2626';
+        dzBody.innerHTML     = `<div class="dz-primary" style="color:#dc2626">${esc(text)}</div>
+          <div class="dz-secondary" style="margin-top:4px">
+            <span class="dz-link" id="dzRetry">Давай ещё раз</span>
+          </div>`;
+        document.getElementById('dzRetry').addEventListener('click', e => {
+          e.stopPropagation();
+          setDzState('idle');
+        });
+      }
+    }
+
+    function onBrowseClick(e) {
+      e.stopPropagation();
+      fileInput.click();
+    }
+
+    document.getElementById('dzBrowse').addEventListener('click', onBrowseClick);
+
+    dropZone.addEventListener('click', () => {
+      if (dropZone.classList.contains('dz-uploading')) return;
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) uploadFile(fileInput.files[0]);
+      fileInput.value = '';
+    });
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!dropZone.classList.contains('dz-uploading')) dropZone.classList.add('dz-drag');
+    });
+    dropZone.addEventListener('dragleave', e => {
+      if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('dz-drag');
+    });
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dz-drag');
+      const file = e.dataTransfer.files[0];
+      if (file) uploadFile(file);
+    });
+
+    async function uploadFile(file) {
+      const nameLower = file.name.toLowerCase();
+      const isZip  = nameLower.endsWith('.zip');
+      const isDocx = nameLower.endsWith('.docx');
+      if (!isZip && !isDocx) {
+        setDzState('error', 'Только .zip или .docx, давай нормальный файл');
+        return;
+      }
+
+      const safeName = toSafeName(file.name);
+      const existing = currentArchives.find(a => a.name === safeName);
+      if (existing) {
+        openDuplicate(file, existing);
+        return;
+      }
+
+      await doUpload(file);
+    }
+
+    async function doUpload(file) {
+      const nameLower = file.name.toLowerCase();
+      const isDocx = nameLower.endsWith('.docx');
+      setDzState('uploading', file.name);
+
+      const endpoint = isDocx ? '/api/upload-docx' : '/api/upload';
+      const form = new FormData();
+      form.append('file', file);
+      try {
+        const res  = await fetch(endpoint, { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) {
+          setDzState('error', data.detail || 'Что-то пошло не так');
+        } else {
+          setDzState('success', file.name);
+          refresh();
+          setTimeout(() => setDzState('idle'), 3500);
+        }
+      } catch (_) {
+        setDzState('error', 'Сервер не отвечает, попробуй ещё раз');
+      }
+    }
+
+    // ── Settings modal ───────────────────────────────────────────────────────
+    const settingsOverlay    = document.getElementById('settingsOverlay');
+    const settingsCloseBtn   = document.getElementById('settingsCloseBtn');
+    const promptList         = document.getElementById('promptList');
+    const addPromptBtn       = document.getElementById('addPromptBtn');
+    const promptForm         = document.getElementById('promptForm');
+    const promptFormTitle    = document.getElementById('promptFormTitle');
+    const promptNameInput    = document.getElementById('promptNameInput');
+    const promptTextInput    = document.getElementById('promptTextInput');
+    const promptFormCancelBtn= document.getElementById('promptFormCancelBtn');
+    const promptFormSaveBtn  = document.getElementById('promptFormSaveBtn');
+
+    let editingPromptId = null;
+
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    settingsCloseBtn.addEventListener('click', closeSettings);
+    settingsOverlay.addEventListener('click', e => { if (e.target === settingsOverlay) closeSettings(); });
+
+    function openSettings() {
+      settingsOverlay.hidden = false;
+      loadPrompts();
+    }
+    function closeSettings() {
+      settingsOverlay.hidden = true;
+      hidePromptForm();
+    }
+
+    async function loadPrompts() {
+      try {
+        const res = await fetch('/api/prompts');
+        const data = await res.json();
+        renderPromptList(data.prompts || []);
+      } catch (_) {
+        promptList.innerHTML = '<div style="color:var(--muted);font-size:12px">Не удалось загрузить промты</div>';
+      }
+    }
+
+    function renderPromptList(prompts) {
+      promptList.innerHTML = '';
+      if (!prompts.length) {
+        promptList.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px 0">Промтов пока нет</div>';
+        return;
+      }
+      prompts.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'prompt-item';
+        const preview = (p.text || '').slice(0, 80).replace(/\n/g, ' ');
+        item.innerHTML = `
+          <div class="prompt-item-body">
+            <div class="prompt-item-name">
+              ${esc(p.name)}
+              ${p.is_default ? '<span class="default-badge">дефолт</span>' : ''}
+            </div>
+            <div class="prompt-item-preview">${esc(preview)}…</div>
+          </div>
+          <div class="prompt-actions">
+            ${!p.is_default ? `<button class="prompt-action-btn" data-action="default" data-id="${esc(p.id)}" title="Сделать дефолтным">
+              <span class="material-symbols-outlined" style="font-size:14px">star</span>
+            </button>` : ''}
+            <button class="prompt-action-btn" data-action="edit" data-id="${esc(p.id)}" data-name="${esc(p.name)}" data-text="${esc(p.text)}" title="Редактировать">
+              <span class="material-symbols-outlined" style="font-size:14px">edit</span>
+            </button>
+            ${!p.is_default ? `<button class="prompt-action-btn danger" data-action="delete" data-id="${esc(p.id)}" title="Удалить">
+              <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+            </button>` : ''}
+          </div>`;
+        item.querySelectorAll('.prompt-action-btn').forEach(btn => {
+          btn.addEventListener('click', e => { e.stopPropagation(); onPromptAction(btn); });
+        });
+        promptList.appendChild(item);
+      });
+    }
+
+    async function onPromptAction(btn) {
+      const action = btn.dataset.action;
+      const id     = btn.dataset.id;
+      if (action === 'edit') {
+        editingPromptId = id;
+        promptNameInput.value = btn.dataset.name || '';
+        promptTextInput.value = btn.dataset.text || '';
+        promptFormTitle.textContent = 'Редактировать промт';
+        showPromptForm();
+      } else if (action === 'default') {
+        await fetch(`/api/prompts/${encodeURIComponent(id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_default: true }),
+        });
+        loadPrompts();
+      } else if (action === 'delete') {
+        if (!confirm('Удалить этот промт?')) return;
+        await fetch(`/api/prompts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        loadPrompts();
+      }
+    }
+
+    addPromptBtn.addEventListener('click', () => {
+      editingPromptId = null;
+      promptNameInput.value = '';
+      promptTextInput.value = '';
+      promptFormTitle.textContent = 'Новый промт';
+      showPromptForm();
+    });
+
+    function showPromptForm() {
+      promptForm.hidden = false;
+      addPromptBtn.hidden = true;
+      requestAnimationFrame(() => promptNameInput.focus());
+    }
+    function hidePromptForm() {
+      promptForm.hidden = true;
+      addPromptBtn.hidden = false;
+      editingPromptId = null;
+    }
+
+    promptFormCancelBtn.addEventListener('click', hidePromptForm);
+
+    promptFormSaveBtn.addEventListener('click', async () => {
+      const name = promptNameInput.value.trim();
+      const text = promptTextInput.value.trim();
+      if (!name || !text) {
+        if (!name) promptNameInput.style.borderColor = '#dc2626';
+        if (!text) promptTextInput.style.borderColor = '#dc2626';
+        return;
+      }
+      promptNameInput.style.borderColor = '';
+      promptTextInput.style.borderColor = '';
+
+      if (editingPromptId) {
+        await fetch(`/api/prompts/${encodeURIComponent(editingPromptId)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, text }),
+        });
+      } else {
+        await fetch('/api/prompts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, text }),
+        });
+      }
+      hidePromptForm();
+      loadPrompts();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !settingsOverlay.hidden) { closeSettings(); }
+    });
+
+    // ── Image mode toggle ────────────────────────────────────────────────────
+    const modeSwitchBtn   = document.getElementById('modeSwitchBtn');
+    const modeSwitchLabel = document.getElementById('modeSwitchLabel');
+    let modeDescribeDiagrams = false;
+
+    function applyModeUI(dd) {
+      modeDescribeDiagrams = dd;
+      modeSwitchBtn.classList.toggle('on', dd);
+      modeSwitchBtn.setAttribute('aria-checked', dd ? 'true' : 'false');
+      modeSwitchLabel.textContent = dd ? 'всё разберём' : 'только формулы';
+    }
+
+    async function loadMode() {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          applyModeUI(!!data.describe_diagrams);
+        }
+      } catch (_) {}
+    }
+
+    async function saveMode(dd) {
+      if (dd === modeDescribeDiagrams) return;
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ describe_diagrams: dd }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          applyModeUI(!!data.describe_diagrams);
+        }
+      } catch (_) {}
+    }
+
+    modeSwitchBtn.addEventListener('click', () => saveMode(!modeDescribeDiagrams));
+
+    loadMode();
+
+    // ── Sort control ─────────────────────────────────────────────────────────
+    (function initSort() {
+      document.querySelectorAll('.sort-seg-btn').forEach(btn => {
+        btn.classList.toggle('sort-active', btn.dataset.sort === currentSort);
+        btn.addEventListener('click', () => {
+          if (btn.dataset.sort === currentSort) return;
+          currentSort = btn.dataset.sort;
+          localStorage.setItem('masha_sort', currentSort);
+          document.querySelectorAll('.sort-seg-btn').forEach(b => {
+            b.classList.toggle('sort-active', b.dataset.sort === currentSort);
+          });
+          render(sortArchives(rawArchives, currentSort), true);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
