@@ -6,10 +6,12 @@ No extra dependencies — uses only stdlib (urllib, subprocess, pathlib).
 """
 from __future__ import annotations
 
+import base64
+import json
 import subprocess
 from pathlib import Path
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 HERE = Path(__file__).parent.resolve()
 PROJECT_ROOT = HERE.parent
@@ -21,7 +23,7 @@ REQUIREMENTS_LAUNCHER = HERE / "requirements-launcher.txt"
 VENV_PIP = PROJECT_ROOT / ".venv" / "Scripts" / "pip.exe"
 
 REMOTE_VERSION_URL = (
-    "https://raw.githubusercontent.com/MirTrudMike/HR_Edit/main/VERSION"
+    "https://api.github.com/repos/MirTrudMike/HR_Edit/contents/VERSION"
 )
 
 
@@ -39,17 +41,26 @@ def get_local_version() -> str:
 
 def get_remote_version(timeout: int = 10) -> str | None:
     """
-    Fetch the latest version string from GitHub.
+    Fetch the latest version string from GitHub Contents API.
+    Uses the API instead of raw.githubusercontent.com to avoid CDN caching delays.
     Returns None on network error or unexpected response.
     """
     try:
-        with urlopen(REMOTE_VERSION_URL, timeout=timeout) as resp:
-            raw = resp.read().decode("utf-8").strip()
-            # Sanity check: should look like a version number
+        req = Request(
+            REMOTE_VERSION_URL,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "User-Agent": "HR_Edit-updater",
+            },
+        )
+        with urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            raw = base64.b64decode(data["content"]).decode("utf-8").strip()
             if raw and all(c.isdigit() or c == "." for c in raw):
                 return raw
             return None
-    except (URLError, OSError, ValueError):
+    except (URLError, OSError, ValueError, KeyError):
         return None
 
 

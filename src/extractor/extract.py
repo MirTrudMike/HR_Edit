@@ -20,9 +20,6 @@ from src.extractor.renderer import (
 
 
 def extract(args: argparse.Namespace) -> None:
-    from dotenv import load_dotenv
-    load_dotenv()
-
     source = Path(args.docx).resolve()
     default_work_dir = Path("work").resolve()
     default_runs_dir = default_work_dir / "runs"
