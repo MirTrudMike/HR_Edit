@@ -265,7 +265,7 @@ Write-Step "Устанавливаю зависимости (несколько 
 $reqFile         = Join-Path $INSTALL_DIR "requirements.txt"
 $reqLauncherFile = Join-Path $INSTALL_DIR "windows\requirements-launcher.txt"
 
-Invoke-Pip "Обновляю pip"               { & $venvPip install --upgrade pip }
+Invoke-Pip "Обновляю pip"               { & $venvPython -m pip install --upgrade pip }
 Invoke-Pip "Устанавливаю requirements"  { & $venvPip install -r $reqFile }
 Invoke-Pip "Устанавливаю pystray/Pillow" { & $venvPip install -r $reqLauncherFile }
 
