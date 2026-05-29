@@ -187,13 +187,12 @@ def run_ocr(
     cache_path = ctx.cache_dir / f"{ref.sha256}.json"
     if cache_path.exists():
         cached = json.loads(cache_path.read_text(encoding="utf-8"))
-        if cached.get("notes") != "OPENAI_API_KEY is not set.":
-            if _should_escalate(ctx, cached) and cached.get("model") != ctx.strong_model:
-                stronger = _run_openai_ocr(ctx, ref, normalized, fmt, ctx.strong_model)
-                stronger["escalated_from"] = cached.get("model", ctx.model)
-                cache_path.write_text(json.dumps(stronger, ensure_ascii=False, indent=2), encoding="utf-8")
-                return stronger
-            return cached
+        if _should_escalate(ctx, cached) and cached.get("model") != ctx.strong_model:
+            stronger = _run_openai_ocr(ctx, ref, normalized, fmt, ctx.strong_model)
+            stronger["escalated_from"] = cached.get("model", ctx.model)
+            cache_path.write_text(json.dumps(stronger, ensure_ascii=False, indent=2), encoding="utf-8")
+            return stronger
+        return cached
 
     if ctx.ocr_mode in {"openai", "hybrid"}:
         result = _run_openai_ocr(ctx, ref, normalized, fmt, ctx.model)
@@ -204,15 +203,12 @@ def run_ocr(
     else:
         result = {"kind": "unknown", "text": "", "confidence": 0, "notes": "OCR mode is disabled."}
 
-    if result.get("notes") not in {"OPENAI_API_KEY is not set."}:
-        cache_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    cache_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 
 
 def _should_escalate(ctx: ExtractionContext, result: dict[str, Any]) -> bool:
     if not ctx.strong_model or ctx.strong_model == ctx.model:
-        return False
-    if result.get("notes") == "OPENAI_API_KEY is not set.":
         return False
     kind = result.get("kind") or "unknown"
     confidence = result.get("confidence")
@@ -232,14 +228,10 @@ def _run_openai_ocr(
 ) -> dict[str, Any]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        ctx.warnings.append("OPENAI_API_KEY is not set; image OCR skipped.")
-        return {
-            "kind": "unknown",
-            "text": "",
-            "latex": "",
-            "confidence": 0,
-            "notes": "OPENAI_API_KEY is not set.",
-        }
+        raise RuntimeError(
+            "OPENAI_API_KEY is not set — image OCR cannot run. "
+            "Check your .env file."
+        )
 
     from openai import OpenAI
 
@@ -272,16 +264,9 @@ def _run_openai_ocr(
             ],
         )
     except Exception as exc:
-        ctx.warnings.append(f"OpenAI OCR failed for {ref.source_name} with {model}: {exc}")
-        return {
-            "kind": "unknown",
-            "text": "",
-            "latex": "",
-            "confidence": 0,
-            "description": "",
-            "notes": f"OpenAI OCR failed with {model}: {type(exc).__name__}",
-            "model": model,
-        }
+        raise RuntimeError(
+            f"OpenAI OCR failed for {ref.source_name} (model: {model}): {exc}"
+        ) from exc
 
     output = getattr(response, "output_text", "") or ""
     result = _parse_ocr_json(output)

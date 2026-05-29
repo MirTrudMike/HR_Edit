@@ -367,11 +367,16 @@ def create_app(store: StateStore, settings_store: SettingsStore | None = None) -
                 _run_pipeline(dest, describe_diagrams=dd, progress_callback=_on_progress)
                 out_dir = ARCHIVE_RUNS_DIR / safe_name
                 count = 0
+                doc_errors: list[str] = []
                 manifest_path = out_dir / "manifest.json"
                 if manifest_path.exists():
                     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                     count = manifest.get("count", 0)
-                store.mark_ready(safe_name, str(out_dir), count)
+                    for r in manifest.get("results", []):
+                        if r.get("error"):
+                            doc_errors.append(f"{Path(r['source']).name}: {r['error']}")
+                partial_error = "; ".join(doc_errors) if doc_errors else None
+                store.mark_ready(safe_name, str(out_dir), count, error=partial_error)
             except Exception as exc:
                 store.mark_error(safe_name, str(exc))
 
@@ -409,11 +414,16 @@ def create_app(store: StateStore, settings_store: SettingsStore | None = None) -
                 _run_docx_pipeline(dest, describe_diagrams=dd, progress_callback=_on_progress)
                 out_dir = ARCHIVE_RUNS_DIR / safe_name
                 count = 1
+                doc_errors: list[str] = []
                 manifest_path = out_dir / "manifest.json"
                 if manifest_path.exists():
                     manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
                     count = manifest_data.get("count", 1)
-                store.mark_ready(safe_name, str(out_dir), count)
+                    for r in manifest_data.get("results", []):
+                        if r.get("error"):
+                            doc_errors.append(f"{Path(r['source']).name}: {r['error']}")
+                partial_error = "; ".join(doc_errors) if doc_errors else None
+                store.mark_ready(safe_name, str(out_dir), count, error=partial_error)
             except Exception as exc:
                 store.mark_error(safe_name, str(exc))
 

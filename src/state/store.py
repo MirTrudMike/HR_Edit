@@ -92,7 +92,7 @@ class StateStore:
                 rec["progress_total"] = total
                 self._save()
 
-    def mark_ready(self, name: str, out_dir: str, count: int) -> None:
+    def mark_ready(self, name: str, out_dir: str, count: int, error: str | None = None) -> None:
         with self._lock:
             rec = self._data["archives"].get(name, {"name": name})
             rec.update({
@@ -101,7 +101,7 @@ class StateStore:
                 "is_new": True,
                 "count": count,
                 "status": "ready",
-                "error": None,
+                "error": error,
             })
             self._data["archives"][name] = rec
             self._save()
