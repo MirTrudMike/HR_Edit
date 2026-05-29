@@ -124,9 +124,10 @@ def _md_to_plain(md: str) -> str:
 
 def _call_openai_analyze(document_text: str, system_prompt: str, model: str) -> dict[str, Any]:
     """Send document text to OpenAI and return parsed JSON result."""
+    import os
     from openai import OpenAI
 
-    client = OpenAI()
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.chat.completions.create(
         model=model,
         response_format={"type": "json_object"},

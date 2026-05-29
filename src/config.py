@@ -5,12 +5,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
-# ---------------------------------------------------------------------------
-# Paths
-# ---------------------------------------------------------------------------
+# Explicit path — avoids cwd-dependent lookup when launched as a subprocess
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+load_dotenv(dotenv_path=PROJECT_ROOT / ".env")
 WORK_DIR = PROJECT_ROOT / "work"
 ARCHIVE_RUNS_DIR = WORK_DIR / "archive_runs"
 UPLOADS_DIR = WORK_DIR / "uploads"
