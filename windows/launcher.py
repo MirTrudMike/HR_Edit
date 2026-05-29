@@ -10,16 +10,27 @@ Tray menu:
 """
 from __future__ import annotations
 
+import ctypes
 import subprocess
 import sys
 import threading
 import time
 import webbrowser
 from pathlib import Path
-from typing import Optional
+from typing import IO, Optional
 
 import pystray
 from PIL import Image, ImageDraw
+
+# ---------------------------------------------------------------------------
+# Single-instance guard: exit silently if another copy is already running
+# ---------------------------------------------------------------------------
+
+if sys.platform == "win32":
+    _MUTEX_NAME = "Global\\HR_Edit_SingleInstance"
+    _mutex_handle = ctypes.windll.kernel32.CreateMutexW(None, False, _MUTEX_NAME)
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        sys.exit(0)
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -27,8 +38,9 @@ from PIL import Image, ImageDraw
 HERE = Path(__file__).parent.resolve()
 PROJECT_ROOT = HERE.parent
 
-VENV_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "pythonw.exe"
+VENV_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"   # python.exe for the server subprocess
 ENTRY_POINT = PROJECT_ROOT / "run.py"
+LOG_FILE = PROJECT_ROOT / "work" / "server.log"
 
 SERVER_URL = "http://127.0.0.1:8765"
 
@@ -54,6 +66,7 @@ ICON_RUNNING = _make_icon("#3dba5f")
 # ---------------------------------------------------------------------------
 
 _proc: Optional[subprocess.Popen] = None
+_log_fh: Optional[IO[str]] = None
 _proc_lock = threading.Lock()
 
 
@@ -63,20 +76,25 @@ def _is_running() -> bool:
 
 
 def _start_server() -> None:
-    global _proc
+    global _proc, _log_fh
     with _proc_lock:
         if _proc is not None and _proc.poll() is None:
             return
         python = VENV_PYTHON if VENV_PYTHON.exists() else Path(sys.executable)
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _log_fh = open(LOG_FILE, "a", encoding="utf-8")
         _proc = subprocess.Popen(
             [str(python), str(ENTRY_POINT)],
             cwd=str(PROJECT_ROOT),
             creationflags=subprocess.CREATE_NO_WINDOW,
+            stdout=_log_fh,
+            stderr=_log_fh,
+            stdin=subprocess.DEVNULL,
         )
 
 
 def _stop_server() -> None:
-    global _proc
+    global _proc, _log_fh
     with _proc_lock:
         if _proc is None:
             return
@@ -86,6 +104,12 @@ def _stop_server() -> None:
         except Exception:
             _proc.kill()
         _proc = None
+        if _log_fh is not None:
+            try:
+                _log_fh.close()
+            except Exception:
+                pass
+            _log_fh = None
 
 
 # ---------------------------------------------------------------------------
@@ -225,6 +249,11 @@ def _on_do_update(icon: pystray.Icon, _item: pystray.MenuItem) -> None:
     threading.Thread(target=_do_update_bg, args=(icon,), daemon=True).start()
 
 
+def _on_exit(icon: pystray.Icon, _item: pystray.MenuItem) -> None:
+    _stop_server()
+    icon.stop()
+
+
 # ---------------------------------------------------------------------------
 # Dynamic menu construction
 # ---------------------------------------------------------------------------
@@ -263,6 +292,8 @@ def _build_menu(_icon: pystray.Icon) -> pystray.Menu:
         pystray.MenuItem("Остановить", _on_stop, enabled=running),
         pystray.Menu.SEPARATOR,
         _build_update_item(),
+        pystray.Menu.SEPARATOR,
+        pystray.MenuItem("Выход", _on_exit),
     )
 
 
