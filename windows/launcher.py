@@ -5,16 +5,18 @@ Tray menu:
   Start   — launch run.py and open the browser
   Open    — open the browser (active only when server is running)
   Stop    — kill the server process (tray stays alive)
-  Update  — pull latest from GitHub and restart  [placeholder]
+  ----
+  <update item> — idle / checking / update available / updating / error
 """
 from __future__ import annotations
 
 import subprocess
 import sys
-import time
 import threading
+import time
 import webbrowser
 from pathlib import Path
+from typing import Optional
 
 import pystray
 from PIL import Image, ImageDraw
@@ -25,14 +27,16 @@ from PIL import Image, ImageDraw
 HERE = Path(__file__).parent.resolve()
 PROJECT_ROOT = HERE.parent
 
-# On Windows the installer places the venv next to the project root.
 VENV_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "pythonw.exe"
 ENTRY_POINT = PROJECT_ROOT / "run.py"
 
 SERVER_URL = "http://127.0.0.1:8765"
 
+STARTUP_CHECK_DELAY = 8      # seconds after launch before first version check
+AUTO_CHECK_INTERVAL = 6 * 3600  # repeat check every 6 hours
+
 # ---------------------------------------------------------------------------
-# Icons  (16x16 circles: grey = stopped, green = running)
+# Tray icons  (64×64 circles: grey = stopped, green = running)
 # ---------------------------------------------------------------------------
 
 def _make_icon(color: str) -> Image.Image:
@@ -49,7 +53,7 @@ ICON_RUNNING = _make_icon("#3dba5f")
 # Server process management
 # ---------------------------------------------------------------------------
 
-_proc: subprocess.Popen | None = None
+_proc: Optional[subprocess.Popen] = None
 _proc_lock = threading.Lock()
 
 
@@ -62,13 +66,11 @@ def _start_server() -> None:
     global _proc
     with _proc_lock:
         if _proc is not None and _proc.poll() is None:
-            return  # already running
-
+            return
         python = VENV_PYTHON if VENV_PYTHON.exists() else Path(sys.executable)
         _proc = subprocess.Popen(
             [str(python), str(ENTRY_POINT)],
             cwd=str(PROJECT_ROOT),
-            # detach from the launcher's console so no black window appears
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
 
@@ -87,16 +89,113 @@ def _stop_server() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Update state machine
+#
+# States:
+#   None        — not checked yet  →  "Проверить обновления"
+#   "checking"  — request in flight →  "Проверяю..." (disabled)
+#   "available" — new version found →  "Обновить до X.Y.Z"
+#   "up_to_date"— already latest   →  "Всё актуально ✓" (disabled, then resets)
+#   "updating"  — pull in progress  →  "Обновляю..." (disabled)
+#   "error"     — network / git err →  "Ошибка — попробовать снова"
+# ---------------------------------------------------------------------------
+
+_update_state: Optional[str] = None
+_available_version: str = ""
+_update_state_lock = threading.Lock()
+_check_mutex = threading.Lock()   # prevents concurrent version checks
+
+
+def _set_state(icon: pystray.Icon, state: Optional[str], version: str = "") -> None:
+    global _update_state, _available_version
+    with _update_state_lock:
+        _update_state = state
+        _available_version = version
+    _refresh_menu(icon)
+
+
+def _check_version_bg(icon: pystray.Icon) -> None:
+    """Run version check in the calling thread. Use _check_mutex to prevent races."""
+    if not _check_mutex.acquire(blocking=False):
+        return  # check already in progress
+    try:
+        _set_state(icon, "checking")
+        import updater
+        remote = updater.get_remote_version()
+        if remote is None:
+            _set_state(icon, "error")
+            return
+        local = updater.get_local_version()
+        if updater.is_newer(remote, local):
+            _set_state(icon, "available", remote)
+        else:
+            _set_state(icon, "up_to_date")
+            # Show "up to date" briefly, then return to default idle state
+            time.sleep(4)
+            with _update_state_lock:
+                still_same = (_update_state == "up_to_date")
+            if still_same:
+                _set_state(icon, None)
+    except Exception:
+        _set_state(icon, "error")
+    finally:
+        _check_mutex.release()
+
+
+def _do_update_bg(icon: pystray.Icon) -> None:
+    """Pull latest code, reinstall deps, then restart the launcher."""
+    _set_state(icon, "updating")
+
+    was_running = _is_running()
+    if was_running:
+        _stop_server()
+
+    try:
+        import updater
+        success, err = updater.run_update()
+    except Exception as exc:
+        success, err = False, str(exc)
+
+    if not success:
+        # On failure: restore server and show error
+        _set_state(icon, "error")
+        if was_running:
+            _start_server()
+        return
+
+    # Success — spawn a fresh launcher instance, then exit this one
+    python = VENV_PYTHON if VENV_PYTHON.exists() else Path(sys.executable)
+    subprocess.Popen(
+        [str(python), str(HERE / "launcher.py")],
+        cwd=str(PROJECT_ROOT),
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    icon.stop()  # exits pystray event loop → process ends
+
+
+def _auto_check_loop(icon: pystray.Icon) -> None:
+    """Background loop: first check after startup, then every AUTO_CHECK_INTERVAL."""
+    time.sleep(STARTUP_CHECK_DELAY)
+    while True:
+        with _update_state_lock:
+            state = _update_state
+        # Skip if a check is already running, update is available, or install is in progress
+        if state not in ("checking", "available", "updating"):
+            _check_version_bg(icon)
+        time.sleep(AUTO_CHECK_INTERVAL)
+
+
+# ---------------------------------------------------------------------------
 # Menu callbacks
 # ---------------------------------------------------------------------------
 
 def _wait_and_open(icon: pystray.Icon) -> None:
-    """Wait briefly for the server to start, then open the browser."""
-    for _ in range(20):          # up to 10 s
+    """Wait for the server port to bind, then open the browser."""
+    for _ in range(20):
         time.sleep(0.5)
         if _is_running():
             break
-    time.sleep(1.5)              # let uvicorn bind the port
+    time.sleep(1.5)
     webbrowser.open(SERVER_URL)
     _refresh_menu(icon)
 
@@ -118,16 +217,40 @@ def _on_stop(icon: pystray.Icon, _item: pystray.MenuItem) -> None:
     _refresh_menu(icon)
 
 
-def _on_update(_icon: pystray.Icon, _item: pystray.MenuItem) -> None:
-    # Placeholder — update logic will be implemented in a future version.
-    pass
+def _on_check_update(icon: pystray.Icon, _item: pystray.MenuItem) -> None:
+    threading.Thread(target=_check_version_bg, args=(icon,), daemon=True).start()
+
+
+def _on_do_update(icon: pystray.Icon, _item: pystray.MenuItem) -> None:
+    threading.Thread(target=_do_update_bg, args=(icon,), daemon=True).start()
 
 
 # ---------------------------------------------------------------------------
-# Dynamic menu rebuild
+# Dynamic menu construction
 # ---------------------------------------------------------------------------
 
-def _build_menu(icon: pystray.Icon) -> pystray.Menu:
+def _build_update_item() -> pystray.MenuItem:
+    with _update_state_lock:
+        state = _update_state
+        version = _available_version
+
+    _noop = lambda i, it: None  # noqa: E731
+
+    if state == "checking":
+        return pystray.MenuItem("Проверяю обновления...", _noop, enabled=False)
+    if state == "available":
+        return pystray.MenuItem(f"Обновить до {version}", _on_do_update)
+    if state == "up_to_date":
+        return pystray.MenuItem("Всё актуально ✓", _noop, enabled=False)
+    if state == "updating":
+        return pystray.MenuItem("Обновляю...", _noop, enabled=False)
+    if state == "error":
+        return pystray.MenuItem("Ошибка — попробовать снова", _on_check_update)
+    # Default idle state
+    return pystray.MenuItem("Проверить обновления", _on_check_update)
+
+
+def _build_menu(_icon: pystray.Icon) -> pystray.Menu:
     running = _is_running()
     return pystray.Menu(
         pystray.MenuItem(
@@ -136,18 +259,10 @@ def _build_menu(icon: pystray.Icon) -> pystray.Menu:
             enabled=not running,
             default=True,
         ),
-        pystray.MenuItem(
-            "Открыть",
-            _on_open,
-            enabled=running,
-        ),
-        pystray.MenuItem(
-            "Остановить",
-            _on_stop,
-            enabled=running,
-        ),
+        pystray.MenuItem("Открыть", _on_open, enabled=running),
+        pystray.MenuItem("Остановить", _on_stop, enabled=running),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Обновить", _on_update),
+        _build_update_item(),
     )
 
 
@@ -157,7 +272,7 @@ def _refresh_menu(icon: pystray.Icon) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Heartbeat: update icon/menu if the server dies unexpectedly
+# Heartbeat: updates icon/menu if the server dies unexpectedly
 # ---------------------------------------------------------------------------
 
 def _heartbeat(icon: pystray.Icon) -> None:
@@ -183,6 +298,7 @@ def main() -> None:
     icon.menu = _build_menu(icon)
 
     threading.Thread(target=_heartbeat, args=(icon,), daemon=True).start()
+    threading.Thread(target=_auto_check_loop, args=(icon,), daemon=True).start()
 
     icon.run()
 
