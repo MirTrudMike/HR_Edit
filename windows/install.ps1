@@ -101,16 +101,25 @@ Write-OK "winget $wingetVer"
 # ---------------------------------------------------------------------------
 Write-Step "Проверяю Python..."
 
+function Test-PythonVersion([string]$Exe) {
+    # Returns $true if $Exe is Python 3.9+.
+    # Wrapped in its own function so try/catch doesn't swallow the outer $ErrorActionPreference = Stop.
+    try {
+        $v = "$(& $Exe --version 2>&1)"
+        return ($v -match "Python 3\.(\d+)" -and [int]$Matches[1] -ge 9)
+    } catch {
+        return $false
+    }
+}
+
 function Get-PythonExe {
     # py launcher — самый надёжный способ на Windows
     if (Get-Command py -ErrorAction SilentlyContinue) {
-        $v = (& py --version 2>&1).ToString()
-        if ($v -match "Python 3\.(\d+)" -and [int]$Matches[1] -ge 9) { return "py" }
+        if (Test-PythonVersion "py") { return "py" }
     }
     foreach ($cmd in @("python", "python3")) {
         if (Get-Command $cmd -ErrorAction SilentlyContinue) {
-            $v = (& $cmd --version 2>&1).ToString()
-            if ($v -match "Python 3\.(\d+)" -and [int]$Matches[1] -ge 9) { return $cmd }
+            if (Test-PythonVersion $cmd) { return $cmd }
         }
     }
     # Известные пути установки
@@ -124,7 +133,7 @@ function Get-PythonExe {
         "C:\Python310\python.exe"
     )
     foreach ($p in $knownPaths) {
-        if (Test-Path $p) { return $p }
+        if ((Test-Path $p) -and (Test-PythonVersion $p)) { return $p }
     }
     return $null
 }
