@@ -265,9 +265,19 @@ Write-Step "Устанавливаю зависимости (несколько 
 $reqFile         = Join-Path $INSTALL_DIR "requirements.txt"
 $reqLauncherFile = Join-Path $INSTALL_DIR "windows\requirements-launcher.txt"
 
-Invoke-Pip "Обновляю pip"               { & $venvPython -m pip install --upgrade pip }
-Invoke-Pip "Устанавливаю requirements"  { & $venvPip install -r $reqFile }
-Invoke-Pip "Устанавливаю pystray/Pillow" { & $venvPip install -r $reqLauncherFile }
+# pip self-upgrade is optional — on some Windows setups pip refuses to replace itself.
+# A working (possibly older) pip is fine for our purposes.
+$prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+& $venvPython -m pip install --upgrade pip 2>&1 | Out-Null
+$ErrorActionPreference = $prev
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "    pip обновлён" -ForegroundColor DarkGray
+} else {
+    Write-Warn "pip не обновился — продолжаю со старой версией (это нормально)"
+}
+
+Invoke-Pip "Устанавливаю requirements"   { & $venvPython -m pip install -r $reqFile }
+Invoke-Pip "Устанавливаю pystray/Pillow" { & $venvPython -m pip install -r $reqLauncherFile }
 
 Write-OK "Все Python-зависимости установлены"
 
